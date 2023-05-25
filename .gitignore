@@ -1,5 +1,8 @@
 #Git Ignore
-
+sampleTest.cpp
+a.out
+datasketches
+resultados
 
 # Archivos de prueba
 Chicago-20080319.txt

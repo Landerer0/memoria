@@ -5,11 +5,17 @@ using namespace std;
 
 class KLL{
     public:
-        KLL(unsigned long,double,double);
+        KLL(unsigned long,double,double, double);
         ~KLL();
-        
+        std::hash<long> hashLong;
+
         // Operaciones asociadas al problema y funcionalidad general
-        void add(long &element); // agregar element al sketch
+
+        bool sample(long element); // indica si el elemento es seleccionado al samplear
+        bool murmurHashSample(long element); // indica si el elemento es seleccionado al samplear
+        bool reservoirKLLSample(long element, long elementWeight);
+
+        void add(long element); // agregar element al sketch
         void addv(long element); // agregar element al sketch
         unsigned long rank(long element); // indica el rank del elemento proporcionado
         long select(long rank); // retorna el elemento cuyo rank es el indicado
@@ -23,10 +29,16 @@ class KLL{
         void setSeconds(vector<long> seconds);
 
         // Operaciones auxiliares
+        long sizeInBytes();
+        vector<double> parametros();
         void print(); // imprime arreglos
         KLL kllMerge(KLL &kll2);
 
     private:
+        // reservoirKLLSample
+        unsigned long sampleWeight;
+        long sampleElement;
+
         unsigned int numArreglos;
         unsigned int numArreglosOcupados;
         vector<pair<vector<long>, long> > sketch; // arreglo de arreglos con tamaño decreciente
@@ -39,12 +51,14 @@ class KLL{
         void insertCompactionElement(long nivel,long &element,bool updating);
         void compaction(long nivel,bool updating);
 
-        // variables k y c son ctes. entregadas por el usuario, c esta en rango [0.1,1]
-        unsigned long long k; // capacidad del arreglo de mayor tamaño
-        double c; // factor por el que cada arreglo va disminuyendo al aumentar la altura del arreglo
-        unsigned long long n; 
-        unsigned long long numElementosRevisados; 
-        double epsilon;
+        // variables k y c son ctes. entregadas por el usuario, c esta en rango ]0.5,1[
+        unsigned long long n; // si bien no pertenece a la cota espacial, es necesario para determinar H
+        unsigned long long numElementosRevisados, numTotalElementos; 
+        double epsilon, delta, c;
+        long H, H_p, H_pp;
+        long k, s;
+        unsigned long mascara;
+        long wH_pp;
 
         bool debug = false;
 

@@ -5,50 +5,81 @@
 #include <string.h>
 
 #include "kll.hpp"
+#include "murmurhash.hpp"
+
+void debugLetra(string string){
+    cout << string << endl;
+}
 
 using namespace std;
-KLL::KLL(unsigned long numElements, double epsilonParam, double numC){
-    // usar propiedad de log: log_b(a) = log(a)/log(b) 
+KLL::KLL(unsigned long numElements, double epsilonParam, double deltaParam, double cParam){
     n = numElements;
-    c = numC;
     epsilon = epsilonParam;
-    k = ceil(1.0/epsilon* ceil(log2(epsilon*n))) +1;
-    //k = 200;
-    cout<<" k "<<k<<endl;
-    if(k%2==1) k+=1; // k sera par
+    delta = deltaParam;
+    c = cParam;
 
-    cerr << "Num Elementos: " << numElements << endl;
-    cerr << "K: " << k << endl;
-    cerr << "c: " << c << endl;
-    cerr << endl;
-    numArreglos = ceil(log2(n/k*2));
+    H = 1.5*log(epsilon*n); // O(log(epsilon*n))
+    k = (double)(1/epsilon) * log(log((1/delta)));
+    s = log(log((1/delta)));
+
+    H_p = H-s;
+    H_pp = H - ceil((double)log(k) / (double)log((1/c)) ); // H_pp = H - 2s - log(k)
+    if(H_pp<0) H_pp = 0;
+    wH_pp = pow(2,H_pp);
+
+    mascara = pow(2,H_pp);
+    sampleElement=0;
+    sampleWeight=0;
+
+    /*
+    cout << "Con N = " << n << " Epsilon = " << epsilon << " Delta = " 
+        << delta << " y 'c' = " << c << " se obtienen los valores:" << endl;
+    cout << "Cantidad de elementos que pasaron la etapa de muestreo (aprox): " << n/(pow(2,H_pp)) << endl;
+    cout << "H: " << H << endl 
+        << "s: " << s << endl
+        << "k: " << k << endl
+        << "H': " << H_p << endl
+        << "H'': " << H_pp << endl
+        << "Num Arreglos: " << (H - H_pp) << endl
+        << "w_H'': " << wH_pp << endl;
+    
+    cout << endl;
+    */    
+
+    numArreglos = (H - H_pp);
     numElementosRevisados = 0;
-    numArreglosOcupados = 0;
+    numTotalElementos = 0;
+    numArreglosOcupados = H_pp;
     unsigned long long espacioOcupado = 0;
 
     vector<long> sizeTemp;
-    for(int i=0;i<numArreglos;i++){
-        unsigned long long cantElementos = max((int)(k*pow(c,i)),(int)2);
-        sizeTemp.push_back(max((int)(k*pow(c,i)),(int)2));
+    for(int i=H_pp;i<H;i++){
+        unsigned long long cantElementos;
+        if(i>(H-s-1)) cantElementos = k;
+        else cantElementos = max((int)(k*pow(c,H-i-1)),(int)2);
+        //cout << "cantElementos en arreglo " << i+1 << ": " << cantElementos << endl;
+        sizeTemp.push_back(cantElementos);
     }
 
     // inicializar los vectores de tam k*c^lvl
-    for(int i=0;i<numArreglos;i++){
+    for(int i=0;i<sizeTemp.size();i++){
         // el valor por defecto es -1, que indica "vacio"
-        unsigned long long cantElementos = sizeTemp.at(numArreglos-1-i);
+        unsigned long long cantElementos = sizeTemp.at(i);
         espacioOcupado += cantElementos;
-        cerr << "Cantidad Elementos arreglo " << i <<" :" << cantElementos<< endl;
+        //cerr << "Cantidad Elementos arreglo " << i << " (nivel " << i+H_pp+1 <<") :" << cantElementos<< endl;
         long valorElemento = -2;
         vector<long> vectorAtLvlI(cantElementos,valorElemento); 
         pair<vector<long>,long> toInsert;
         toInsert.first=vectorAtLvlI;
         toInsert.second=0; // representa el num de elementos ocupados en el arreglo
         sketch.push_back(toInsert);
-        sorted.push_back(false); // indicamos que no se encuentra sorteado el arreglo
+        //sorted.push_back(false); // indicamos que no se encuentra sorteado el arreglo
     }
 
-    cout << "Cant elementos en Sketch: " << espacioOcupado << " Espacio ocupado: " << espacioOcupado*sizeof(long) << " bytes" <<  endl;
+    //cout << "Cant elementos en Sketch: " << espacioOcupado << " Espacio ocupado: " << espacioOcupado*sizeof(long) << " bytes" <<  endl;
+    
     //print();
+    //cout << "fin inicialización" << endl;
 }
 
 KLL::~KLL(){
@@ -58,9 +89,13 @@ KLL::~KLL(){
 void KLL::insertElement(long nivel,long &element){
     //cout << "insert " << element << endl;
     long posAInsertar = sketch.at(nivel).second;
+    //cout << "pos a insert: " << posAInsertar << endl;
     sketch.at(nivel).first.at(posAInsertar) = element;
+    //debugLetra("a");
     sketch.at(nivel).second++;
-    sorted.at(nivel)=false;
+    //debugLetra("b");
+    //sorted.at(nivel)=false;
+    //debugLetra("c");
 }
 
 void KLL::insertCompactionElement(long nivel,long &element, bool updating){
@@ -98,6 +133,10 @@ void KLL::compaction(long nivel, bool updating){
     long numElementosTotales = sketch.at(nivel).first.size();
     unsigned char elementosPares = 0;
     if(numElementosOcupados==numElementosTotales){
+        //if(nivel==7){
+        //    cout << numElementosRevisados << " de " << numTotalElementos <<  endl;
+        //    print();
+        //} 
         if(nivel+1==numArreglos) return;
         if(debug) cerr << endl << "compaction " << nivel+1 << endl;
         if(rand()%2==0) elementosPares = 0; // se mantienen los elementos pares
@@ -128,9 +167,48 @@ void KLL::compaction(long nivel, bool updating){
     }
 }
 
-void KLL::add(long &element){
+bool KLL::sample(long element){
+    if(rand()%wH_pp==0) return true;
+    return false;
+}
+
+bool KLL::murmurHashSample(long element){
+    // se hace hash, en caso de que sea seleccionado, se indica que se prosiga
+    long hashVal = (murmur64(element)); 
+    if(hashVal%wH_pp==0) return true;
+    return false;
+}
+
+bool KLL::reservoirKLLSample(long element, long elementWeight){
+    sampleWeight = elementWeight + sampleWeight;
+
+    if(sampleWeight<=wH_pp){
+        double probReemplazo = (double) elementWeight/(double) sampleWeight;
+        if((double) (rand()/RAND_MAX) <= probReemplazo) sampleElement = element;
+    }
+    if(sampleWeight==wH_pp){
+        sampleWeight = 0;
+        return true;
+    }
+    
+    // caso merge, revisar
+    else if (sampleWeight>wH_pp){
+
+    }
+
+    return false;
+}
+
+void KLL::add(long element){
+    numTotalElementos++;
+    //if(!sample(element)) return;
+    //if(!murmurHashSample(element)) return;
+    //insertElement(0,element);
+    
+    if(!reservoirKLLSample(element,1)) return;
+    insertElement(0,sampleElement);
+    //cout << element << endl;
     numElementosRevisados++; // para metodo quantile
-    insertElement(0,element);
     compaction((long) 0, false);
 
     return;
@@ -164,7 +242,7 @@ unsigned long KLL::rank(long element){
         }    
     }
 
-    return rank;
+    return pow(2,H_pp)*rank;
 }
 
 long KLL::select(long rank){
@@ -199,7 +277,7 @@ long KLL::select(long rank){
 
 long KLL::quantile(double q){
     q = q/100.0;
-    cout<<" q "<<q<<" numElementosRevisados "<<numElementosRevisados<<"\n";
+    //cout<<" q "<<q<<" numElementosRevisados "<<numElementosRevisados<<"\n";
     return select(floor(q*numElementosRevisados));
 }
 
@@ -208,7 +286,9 @@ long KLL::height(){
 }
 
 void KLL::print(){
-    for(int i=0; i<numArreglos;i++){
+    cout << "H: " << H << ", s: " << s << ", H'': " << H_pp << endl;
+    cout << "numElementosRevisados: " << numElementosRevisados << " numTotal: " << numTotalElementos << endl;
+    for(int i=0; i<sketch.size();i++){
         cout << "Nivel " << i+1 << ":" << endl;
         vector<long> nivelI = sketch.at(i).first;
         for(int j=0;j<nivelI.size();j++){
@@ -295,7 +375,7 @@ KLL::KLL(unsigned long numElements, double epsilonParam, double numC, unsigned l
     // copiar los valores del kll a copiar
     for(int i=0;i<numArreglos;i++){
         sketch.push_back(toCopy->sketchAtLevel(i));
-        sorted.push_back(toCopy->sortedAtLevel(i));
+        //sorted.push_back(toCopy->sortedAtLevel(i));
     }
 }
 
@@ -304,4 +384,58 @@ KLL KLL::copy(){
     return copia;
 }
 
+long KLL::sizeInBytes(){
+    unsigned long totalSize = 0;
+    unsigned long sketchSize = 0;
 
+    //calculo del tamaño de sketchSize
+    for(int i = 0; i< sketch.size();i++){
+        sketchSize+=sizeof(sketch.at(i).second); // entero que me indica numero de valores ocupados en el nivel i
+        sketchSize+= (sketch.at(i).first.size()*sizeof(long));
+    }
+
+    //calculo de totalSize según las variables utilizadas
+    totalSize+=sketchSize;
+    totalSize+=sizeof(hashLong);
+    totalSize+=sizeof(sampleWeight);
+    totalSize+=sizeof(sampleElement);
+    totalSize+=sizeof(numArreglos);
+    totalSize+=sizeof(numArreglosOcupados);
+    totalSize+=sizeof(bool)*sorted.size();
+    totalSize+=sizeof(n);
+    totalSize+=sizeof(numElementosRevisados);
+    totalSize+=sizeof(numTotalElementos);
+    totalSize+=sizeof(epsilon);
+    totalSize+=sizeof(delta);
+    totalSize+=sizeof(c);
+    totalSize+=sizeof(H);
+    totalSize+=sizeof(H_p);
+    totalSize+=sizeof(H_pp);
+    totalSize+=sizeof(k);
+    totalSize+=sizeof(s);
+    totalSize+=sizeof(mascara);
+    totalSize+=sizeof(wH_pp);
+    totalSize+=sizeof(debug);
+
+    // imprimir los resultados
+    cout << "Parametros:" << endl;
+    cout << "N: " << n << ", epsilon: " << epsilon << ", delta: " << delta << ", c: " << c << endl;
+    cout << "H: " << H << ", H': " << H_p << ", H''" << H_pp << ", k_H:" << k << ", s: " << s << endl;
+    cout << "Tamaño del arreglo: " << sketchSize << ", Espacio Total KLL: " << totalSize << endl;
+    return totalSize;
+}
+
+vector<double> KLL::parametros(){
+    vector<double> parametros;
+    parametros.push_back(n);
+    parametros.push_back(epsilon);
+    parametros.push_back(delta);
+    parametros.push_back(c);
+    parametros.push_back(H);
+    parametros.push_back(H_p);
+    parametros.push_back(H_pp);
+    parametros.push_back(s);
+    parametros.push_back(k);
+    parametros.push_back(sizeInBytes());
+    return parametros;
+}
