@@ -3,6 +3,11 @@ sampleTest.cpp
 a.out
 datasketches
 resultados
+data
+visualizacionDistribuciones/archivos
+visualizacionDistribuciones/exphisto
+visualizacionDistribuciones/res.txt
+visualizacionDistribuciones/resMendeley.txt
 
 # Archivos de prueba
 Chicago-20080319.txt

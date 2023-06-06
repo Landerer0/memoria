@@ -31,7 +31,7 @@ KLL::KLL(unsigned long numElements, double epsilonParam, double deltaParam, doub
     sampleElement=0;
     sampleWeight=0;
 
-    /*
+    
     cout << "Con N = " << n << " Epsilon = " << epsilon << " Delta = " 
         << delta << " y 'c' = " << c << " se obtienen los valores:" << endl;
     cout << "Cantidad de elementos que pasaron la etapa de muestreo (aprox): " << n/(pow(2,H_pp)) << endl;
@@ -44,7 +44,7 @@ KLL::KLL(unsigned long numElements, double epsilonParam, double deltaParam, doub
         << "w_H'': " << wH_pp << endl;
     
     cout << endl;
-    */    
+    
 
     numArreglos = (H - H_pp);
     numElementosRevisados = 0;
@@ -67,9 +67,9 @@ KLL::KLL(unsigned long numElements, double epsilonParam, double deltaParam, doub
         unsigned long long cantElementos = sizeTemp.at(i);
         espacioOcupado += cantElementos;
         //cerr << "Cantidad Elementos arreglo " << i << " (nivel " << i+H_pp+1 <<") :" << cantElementos<< endl;
-        long valorElemento = -2;
-        vector<long> vectorAtLvlI(cantElementos,valorElemento); 
-        pair<vector<long>,long> toInsert;
+        double valorElemento = -2;
+        vector<double> vectorAtLvlI(cantElementos,valorElemento); 
+        pair<vector<double>,long> toInsert;
         toInsert.first=vectorAtLvlI;
         toInsert.second=0; // representa el num de elementos ocupados en el arreglo
         sketch.push_back(toInsert);
@@ -86,7 +86,7 @@ KLL::~KLL(){
     
 }
 
-void KLL::insertElement(long nivel,long &element){
+void KLL::insertElement(long nivel,double &element){
     //cout << "insert " << element << endl;
     long posAInsertar = sketch.at(nivel).second;
     //cout << "pos a insert: " << posAInsertar << endl;
@@ -98,8 +98,8 @@ void KLL::insertElement(long nivel,long &element){
     //debugLetra("c");
 }
 
-void KLL::insertCompactionElement(long nivel,long &element, bool updating){
-    // AVANCE2
+void KLL::insertCompactionElement(long nivel,double &element, bool updating){
+    
     // if(updating) cout << "inicio insert " << element << endl;
 
     long posAInsertar = sketch.at(nivel).second;
@@ -107,7 +107,7 @@ void KLL::insertCompactionElement(long nivel,long &element, bool updating){
         if(nivel==numArreglos && updating){
             //Agregar nuevo compactor de tam k
             long numElementosInsert = 2;
-            vector<long> toInsert(numElementosInsert,-2);
+            vector<double> toInsert(numElementosInsert,-2);
             sketch.push_back(make_pair(toInsert,0));
             numArreglos++;
         }
@@ -199,7 +199,7 @@ bool KLL::reservoirKLLSample(long element, long elementWeight){
     return false;
 }
 
-void KLL::add(long element){
+void KLL::add(double element){
     numTotalElementos++;
     //if(!sample(element)) return;
     //if(!murmurHashSample(element)) return;
@@ -214,7 +214,7 @@ void KLL::add(long element){
     return;
 }
 
-void KLL::addv(long element){
+void KLL::addv(double element){
     numElementosRevisados++; // para metodo quantile
     insertElement(0,element);
     compaction((long) 0, false);
@@ -222,10 +222,10 @@ void KLL::addv(long element){
     return;
 }
 
-unsigned long KLL::rank(long element){
+unsigned long KLL::rank(double element){
     unsigned long rank = 0;
 
-    vector<long> actual;
+    vector<double> actual;
 
     for(int nivel=0;nivel< numArreglos;nivel++){ // por cada arreglo
         actual = sketch.at(nivel).first;
@@ -290,7 +290,7 @@ void KLL::print(){
     cout << "numElementosRevisados: " << numElementosRevisados << " numTotal: " << numTotalElementos << endl;
     for(int i=0; i<sketch.size();i++){
         cout << "Nivel " << i+1 << ":" << endl;
-        vector<long> nivelI = sketch.at(i).first;
+        vector<double> nivelI = sketch.at(i).first;
         for(int j=0;j<nivelI.size();j++){
             cout << nivelI.at(j) << " ";
         }
@@ -298,8 +298,8 @@ void KLL::print(){
     }
 }
 
-pair<vector<long>, long> KLL::sketchAtLevel(long nivel){
-    if(nivel<0||nivel>=numArreglos) return make_pair(vector<long>(),-1);
+pair<vector<double>, long> KLL::sketchAtLevel(long nivel){
+    if(nivel<0||nivel>=numArreglos) return make_pair(vector<double>(),-1);
     return sketch.at(nivel);
 }
 
@@ -313,7 +313,7 @@ void KLL::update(KLL kll2){
     // kll2.setSeconds(vector<long>());
     // para cada nivel
     for(int nivel=0; nivel<kll2.height();nivel++){
-        pair<vector<long>,long> kll2pair = kll2.sketchAtLevel(nivel);
+        pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
         // cout << "nivel " << nivel << endl;
         // setSeconds(vector<long>());
         // cerr << "Elementos1 en nivel " << nivel << ": " << sketch.at(nivel).second << endl;
@@ -391,7 +391,7 @@ long KLL::sizeInBytes(){
     //calculo del tamaño de sketchSize
     for(int i = 0; i< sketch.size();i++){
         sketchSize+=sizeof(sketch.at(i).second); // entero que me indica numero de valores ocupados en el nivel i
-        sketchSize+= (sketch.at(i).first.size()*sizeof(long));
+        sketchSize+= (sketch.at(i).first.size()*sizeof(double));
     }
 
     //calculo de totalSize según las variables utilizadas

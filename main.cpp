@@ -27,6 +27,10 @@ double epsilon = 0.05; // tamaño del arreglo mas grande
 double numC=(double)2/(double)3; // factor por el que va disminuyendo el tamaño de cada arreglo a medida pasan los niveles.
 bool manualLectura = false;
 
+string archivoActualTxt = "";
+string archivoActual = "";
+
+
 void quantiles(KLL &kll, int numQuantiles){
     if(numQuantiles <= 0 || numQuantiles>100) return;
     for(int i=0;i<numQuantiles;i++){
@@ -62,7 +66,7 @@ int countwords(char* filename){
     return count;
 }
 
-void quantileTruthKLL(KLL &kll, vector<long> truth, double cuantil, double n, vector<double> &error){
+void quantileTruthKLL(KLL &kll, vector<double> truth, double cuantil, double n, vector<double> &error){
     long posTruth = n*cuantil/100;
     if(posTruth>0) posTruth-=1;
     //cout << posTruth << " " << cuantil << endl;
@@ -83,7 +87,7 @@ void quantileTruthKLL(KLL &kll, vector<long> truth, double cuantil, double n, ve
     error.push_back(errorValue);
 }
 
-void rankTruthKLL(KLL &kll, vector<long> truth, double cuantil, double n, vector<double> &error){
+void rankTruthKLL(KLL &kll, vector<double> truth, double cuantil, double n, vector<double> &error){
     long posTruth = n*cuantil/100;
     if(posTruth>0) posTruth-=1;
 
@@ -104,7 +108,7 @@ void rankTruthKLL(KLL &kll, vector<long> truth, double cuantil, double n, vector
     error.push_back(errorValue);
 }
 
-void pruebaKLL(KLL kll, vector<long> arrTruth, double epsilon, double delta, unsigned long n,vector<double> cuantilesAConsultar,vector<double> &rankError,vector<double> &quantilesError){
+void pruebaKLL(KLL kll, vector<double> arrTruth, double epsilon, double delta, unsigned long n,vector<double> cuantilesAConsultar,vector<double> &rankError,vector<double> &quantilesError){
     {
         for(int i=0;i<cuantilesAConsultar.size();i++){
             quantileTruthKLL(kll,arrTruth,(long)cuantilesAConsultar.at(i),n,quantilesError);
@@ -141,18 +145,55 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     vector<double> parametrosKLL;
     vector<vector<double>> rank; 
     vector<vector<double>> quantile;
+
+    if(distribucion.at(0)==3){
+        if(distribucion.at(1)==1) n = 1000000;
+        else if(distribucion.at(1)==2) n = 2000000;
+        numRepeticiones = 1;
+    } else if(distribucion.at(0)==-1){
+        fstream in(archivoActualTxt);
+        int lines = 0;
+        char endline_char = '\n';
+        while (in.ignore(numeric_limits<streamsize>::max(), in.widen(endline_char)))
+        {
+            ++lines;
+        }
+        n = lines-1;
+        cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
+    }
     // parametros 1
     for(int i=0;i<numRepeticiones;i++){
         KLL kll1(n,epsilon,delta,c);
-        vector<long> arrTruth1;
+        vector<double> arrTruth1;
 
         switch((int)tipoDistribucion){
+            case -1:
+            {
+                if(distribucion.size()!=1) return;
+                std::ifstream archivo(archivoActualTxt);
+                std::string linea;
+                if(archivo.is_open()) {
+                    while (std::getline(archivo, linea)) {
+                        double dato;
+                        std::istringstream iss(linea);
+                        if (iss >> dato) {
+                            kll1.add(dato);
+                            arrTruth1.push_back(dato);
+                        }
+                    }
+                    archivo.close();
+                } else {
+                    std::cout << "No se pudo abrir el archivo: " << archivoActualTxt << std::endl;
+                    return;
+                }
+                break;
+            }
             case 0: //normal
             {
                 if(distribucion.size()!=3) return;
                 std::normal_distribution<> d0{distribucion.at(1), distribucion.at(2)};
                 for(int i=0;i<n;i++){
-                    long toAdd = (long) d0(generator);
+                    double toAdd = d0(generator);
                     kll1.add(toAdd);
                     arrTruth1.push_back(toAdd);
                 }
@@ -163,7 +204,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                 if(distribucion.size()!=3) return;
                 std::gamma_distribution<> d1(distribucion.at(1), distribucion.at(2));
                 for(int i=0;i<n;i++){
-                    long toAdd = (long) d1(generator);
+                    double toAdd = round(d1(generator));
                     kll1.add(toAdd);
                     arrTruth1.push_back(toAdd);
                 }
@@ -175,7 +216,40 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                 if(distribucion.size()!=2) return;
                 std::exponential_distribution<> d2(distribucion.at(1)); 
                 for(int i=0;i<n;i++){
-                    long toAdd = (long) (d2(generator)*100);
+                    double toAdd = round(1.0+d2(generator));
+                    kll1.add(toAdd);
+                    arrTruth1.push_back(toAdd);
+                }
+                break;
+            }
+            case 3: //power law
+            {
+                if(distribucion.size()!=2) return;
+                std::string rutaArchivo = "muestra-plaw-" + to_string((int)distribucion.at(1)) + "m-1.86-xmin1000.txt";
+                std::ifstream archivo(rutaArchivo);
+                std::string linea;
+                if(archivo.is_open()) {
+                    while (std::getline(archivo, linea)) {
+                        double dato;
+                        std::istringstream iss(linea);
+                        if (iss >> dato) {
+                            kll1.add(dato);
+                            arrTruth1.push_back(dato);
+                        }
+                    }
+                    archivo.close();
+                } else {
+                    std::cout << "No se pudo abrir el archivo: " << rutaArchivo << std::endl;
+                    return;
+                }
+                break;
+            }
+            case 4: // uniforme
+            {
+                if(distribucion.size()!=3) return;
+                std::uniform_real_distribution<> d4(distribucion.at(1), distribucion.at(2));
+                for(int i=0;i<n;i++){
+                    double toAdd = round(d4(generator));
                     kll1.add(toAdd);
                     arrTruth1.push_back(toAdd);
                 }
@@ -206,7 +280,18 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
         rank.push_back(rankError1);
         quantile.push_back(quantilesError1);
 
-        if(i+1==numRepeticiones)  parametrosKLL = kll1.parametros();
+        if(i+1==numRepeticiones){
+            // agregaremos un par de datos más, rango del ultimo experimento y cantidad de elementos distintos
+            parametrosKLL = kll1.parametros();
+            parametrosKLL.push_back(abs(arrTruth1[n-1]-arrTruth1[0])); // rango de valores
+            double numElementosRepetidos=0;
+            for(int j=0; j<(n-1);j++){
+                if(arrTruth1[j]==arrTruth1[j+1]) numElementosRepetidos++;
+            }
+            parametrosKLL.push_back(numElementosRepetidos); // num de valores repetidos
+        } 
+        
+         
     }
         
     // Calculo de estadisticas
@@ -233,7 +318,18 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     } else if (distribucion.at(0)==2) {
         filenameEspecifications = filenameEspecifications + "Exponencial";
         filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+    } else if (distribucion.at(0)==3) {
+        filenameEspecifications = filenameEspecifications + "Power_law";
+        filenameEspecifications = filenameEspecifications + "Archivo" + to_string(distribucion.at(1));
+    } else if (distribucion.at(0)==4) {
+        filenameEspecifications = filenameEspecifications + "Uniforme";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+        filenameEspecifications = filenameEspecifications + "y";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
+    } else if (distribucion.at(0)==-1) {
+        filenameEspecifications = filenameEspecifications + archivoActual;
     }
+
 
     filenameEspecifications = filenameEspecifications + "e" + to_string(epsilon) + "d" + to_string(delta);
 
@@ -393,6 +489,13 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     return;
 }
 
+
+vector<double> generadorConsultaArchivo(){
+    vector<double> resultado;
+    resultado.push_back(-1);   
+    return resultado;
+}
+
 vector<double> generadorConsultaVectorNormal(double media, double desviacionEstandar){
     vector<double> resultado;
     resultado.push_back(0);
@@ -413,6 +516,21 @@ vector<double> generadorConsultaVectorExponencial(double lamda){
     vector<double> resultado;
     resultado.push_back(2);
     resultado.push_back(lamda);
+    return resultado;
+}
+
+vector<double> generadorConsultaPowerLaw(double numArchivo){
+    vector<double> resultado;
+    resultado.push_back(3);
+    resultado.push_back(numArchivo);
+    return resultado;
+}
+
+vector<double> generadorConsultaUniforme(double limiteInferior, double limiteSuperior){
+    vector<double> resultado;
+    resultado.push_back(4);
+    resultado.push_back(limiteInferior);
+    resultado.push_back(limiteSuperior);
     return resultado;
 }
 
@@ -440,10 +558,13 @@ int main(int argc, char*argv[]){
     double delta = 0.001;
     double c = (double) 2/(double) 3;
 
+    vector<double> distribucionArchivo = generadorConsultaArchivo();
+
     // Generación de vectores para consultas de distintas distribuciones
     vector<double> distribucionNormal1000y100 = generadorConsultaVectorNormal(1000,100);
     vector<double> distribucionNormal50y10 = generadorConsultaVectorNormal(50,10);
-    vector<double> distribucionNormal100000y100 = generadorConsultaVectorNormal(100000,100);
+    vector<double> distribucionNormal500000y100000 = generadorConsultaVectorNormal(500000,100000);
+    vector<double> distribucionNormal500000y1000000 = generadorConsultaVectorNormal(500000,1000000);
     
     vector<double> distribucionGamma5y1 = generadorConsultaVectorGamma(5,1);
     vector<double> distribucionGamma3y2 = generadorConsultaVectorGamma(3,2);
@@ -452,6 +573,12 @@ int main(int argc, char*argv[]){
     vector<double> distribucionExponencial0p5 = generadorConsultaVectorExponencial(0.5);
     vector<double> distribucionExponencial1p0 = generadorConsultaVectorExponencial(1.0);
     vector<double> distribucionExponencial1p5 = generadorConsultaVectorExponencial(1.5);
+    
+    vector<double> distribucionPowerLaw1 = generadorConsultaPowerLaw(1);
+    vector<double> distribucionPowerLaw2 = generadorConsultaPowerLaw(2);
+
+    vector<double> distribucionUniforme1y100 = generadorConsultaUniforme(1,100);
+    vector<double> distribucionUniforme50000y10000000 = generadorConsultaUniforme(50000,10000000);
 
     // creación de vectores para consulta de cuantiles
     vector<double> consultaCuantiles = {2,5,10,20,30,40,50,60,70,80,90,95,98};
@@ -479,125 +606,59 @@ int main(int argc, char*argv[]){
     vector<double> consultaCuantil95 = {95};
     vector<double> consultaCuantil98 = {98};
     }
-    
+
     int numRepeticiones = 50;
+    
+    if(argc>1){
+        for(int i=1; i<argc; i++){
+            cout << argv[i] << endl;
+            archivoActualTxt = argv[i];
+            cout << archivoActualTxt << endl;
+            archivoActual = archivoActualTxt;
+            size_t posicion = archivoActual.find(".txt");
+            
+            if (posicion != std::string::npos) {
+                archivoActual.erase(posicion, 4); // Eliminamos 4 caracteres: .txt
+            }
+            probarVariacionDistribucion(n,0.05,0.01,c,distribucionArchivo,consultaCuantiles,1);
+            cout << archivoActual << endl;
+        }
+    }
+
     /*
     cout << "MEDIA: 1000, DESVIACIÓN ESTANDAR: 100" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
     cout << "MEDIA: 50, DESVIACIÓN ESTANDAR: 10" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    
+    cout << "MEDIA: 500000, DESVIACIÓN ESTANDAR: 100000" << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionNormal500000y100000,consultaCuantiles,numRepeticiones);
+    cout << "MEDIA: 500000, DESVIACIÓN ESTANDAR: 1000000" << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionNormal500000y1000000,consultaCuantiles,numRepeticiones);
+
     cout << "ALFA: 5, BETA: 1" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
     cout << "ALFA: 3, BETA: 2" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGamma3y2,consultaCuantiles,numRepeticiones);
     cout << "ALFA: 4, BETA: 20" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGamma4y20,consultaCuantiles,numRepeticiones);
-    */
+    
     cout << "LAMDA: 0.5" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionExponencial0p5,consultaCuantiles,numRepeticiones);
     cout << "LAMDA: 1.0" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionExponencial1p0,consultaCuantiles,numRepeticiones);
     cout << "LAMDA: 1.5" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionExponencial1p5,consultaCuantiles,numRepeticiones);
-/*
-    cout << "MEDIA: 1000, DESVIACIÓN ESTANDAR: 100" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.00001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.000001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.005,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.0005,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
-    prueba(n,0.00005,0.0001,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
     
-    cout << "MEDIA: 50, DESVIACIÓN ESTANDAR: 10" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.00001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.000001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.005,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.0005,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-    prueba(n,0.00005,0.0001,c,distribucionNormal50y10,consultaCuantiles,numRepeticiones);
-   
-    cout << "ALFA: 5, BETA: 1" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.00001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.000001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.05,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.005,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.0005,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-    prueba(n,0.00005,0.0001,c,distribucionGamma5y1,consultaCuantiles,numRepeticiones);
-   
-    cout << "ALFA: 3, BETA: 2" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,3,2);
-    prueba(n,0.05,0.001,c,3,2);
-    prueba(n,0.05,0.0001,c,3,2);
-    prueba(n,0.05,0.00001,c,3,2);
-    prueba(n,0.05,0.000001,c,3,2);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,3,2);
-    prueba(n,0.05,0.0001,c,3,2);
-    prueba(n,0.005,0.0001,c,3,2);
-    prueba(n,0.0005,0.0001,c,3,2);
-    prueba(n,0.00005,0.0001,c,3,2);
 
-    cout << "ALFA: 4, BETA: 20" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,4,20);
-    prueba(n,0.05,0.001,c,4,20);
-    prueba(n,0.05,0.0001,c,4,20);
-    prueba(n,0.05,0.00001,c,4,20);
-    prueba(n,0.05,0.000001,c,4,20);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,4,20);
-    prueba(n,0.05,0.0001,c,4,20);
-    prueba(n,0.005,0.0001,c,4,20);
-    prueba(n,0.0005,0.0001,c,4,20);
-    prueba(n,0.00005,0.0001,c,4,20);
+    cout << "Power Law: 1" << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionPowerLaw1,consultaCuantiles,numRepeticiones);
+    cout << "Power Law: 2" << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionPowerLaw2,consultaCuantiles,numRepeticiones);
 
-    cout << "LAMDA: 0.5" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,0.5);
-    prueba(n,0.05,0.001,c,0.5);
-    prueba(n,0.05,0.0001,c,0.5);
-    prueba(n,0.05,0.00001,c,0.5);
-    prueba(n,0.05,0.000001,c,0.5);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,0.5);
-    prueba(n,0.05,0.0001,c,0.5);
-    prueba(n,0.005,0.0001,c,0.5);
-    prueba(n,0.0005,0.0001,c,0.5);
-    prueba(n,0.00005,0.0001,c,0.5);
-    
-    cout << "LAMDA: 1.5" << endl;
-    cout << "VARIACIONES DELTA:" << endl;
-    prueba(n,0.05,0.01,c,1.5);
-    prueba(n,0.05,0.001,c,1.5);
-    prueba(n,0.05,0.0001,c,1.5);
-    prueba(n,0.05,0.00001,c,1.5);
-    prueba(n,0.05,0.000001,c,1.5);
-    cout << "VARIACIONES EPSILON:" << endl << endl;
-    prueba(n,0.5,0.0001,c,1.5);
-    prueba(n,0.05,0.0001,c,1.5);
-    prueba(n,0.005,0.0001,c,1.5);
-    prueba(n,0.0005,0.0001,c,1.5);
-    prueba(n,0.00005,0.0001,c,1.5);
+    cout << "Uniforme limite inferior:1, limite superior:100 " << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionUniforme1y100,consultaCuantiles,numRepeticiones);
+    cout << "Uniforme limite inferior:50000, limite superior:10000000 " << endl;
+    probarVariacionDistribucion(n,0.05,0.01,c,distribucionUniforme50000y10000000,consultaCuantiles,numRepeticiones);
     */
 
     return 0;
