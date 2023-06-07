@@ -19,7 +19,7 @@ KLL::KLL(unsigned long numElements, double epsilonParam, double deltaParam, doub
     c = cParam;
 
     H = 1.5*log(epsilon*n); // O(log(epsilon*n))
-    k = (double)(1/epsilon) * log(log((1/delta)));
+    k = 1.5*(double)(1/epsilon) * log(log((1/delta)));
     s = log(log((1/delta)));
 
     H_p = H-s;
