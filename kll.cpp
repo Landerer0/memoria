@@ -276,6 +276,7 @@ long KLL::select(long rank){
 }
 
 long KLL::quantile(double q){
+    // q pertenece (0,100]
     q = q/100.0;
     //cout<<" q "<<q<<" numElementosRevisados "<<numElementosRevisados<<"\n";
     return select(floor(q*numElementosRevisados));
@@ -350,8 +351,6 @@ KLL KLL::kllMerge(KLL &kll2){
         kllCopy1.update(kll2);
         return kllCopy1;
     } 
-
-    
 }
 
 
