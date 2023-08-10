@@ -2,6 +2,10 @@
 // ./main 0 Chicago-20080319.txt Chicago-20080515.txt Chicago-20110608.txt Chicago-20150219.txt Chicago-20160121.txt
 // ./main 0 Mawi-20161201.txt Mawi-20171101.txt Mawi-20181201.txt Mawi-20191102.txt Mawi-20200901.txt
 // ./main 0 Mendeley.txt Sanjose-20081016.txt
+// nohup ./main 0 Chicago-20080319.txt Chicago-20080515.txt Chicago-20110608.txt Chicago-20150219.txt Chicago-20160121.txt Mawi-20161201.txt Mawi-20171101.txt Mawi-20181201.txt Mawi-20191102.txt Mawi-20200901.txt Mendeley.txt Sanjose-20081016.txt &
+// nohup ./main &
+// nohup ./main 0 Chicago-20080319.txt &
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
@@ -40,6 +44,8 @@ string archivoActualMuestra = "";
 string archivoActualSort = "";
 string archivoActualSortData = "";
 
+bool limiteEspacio = true;
+vector<uint32_t> valoresEspacioLimite = {5000, 7500, 10000, 15000, 20000};
 
 void quantiles(KLL &kll, int numQuantiles){
     if(numQuantiles <= 0 || numQuantiles>100) return;
@@ -85,7 +91,9 @@ void quantileTruthKLL(KLL &kll, vector<double> truth, double cuantil, double n, 
 
     double kllEstimate = kll.quantile(cuantil);
     double truthValue = truth.at(posTruth);
-    double errorValue = (double)abs(truthValue-kllEstimate)/(double)truthValue;
+    double errorValue;
+    if(truthValue!=0) errorValue = (double)abs(truthValue-kllEstimate)/(double)truthValue;
+    else errorValue = (double)abs(truthValue-kllEstimate)/(double)1;
 
     //cout<<" quantile " << (double)cuantil/(double)100 << ": KLL: " <<kllEstimate << " Truth: " << truthValue 
     //<< " diferencia |q(truth)-q(kll)|: " << abs(kllEstimate-truthValue)<< " ,  error: " << errorValue <<  endl;
@@ -197,7 +205,9 @@ void quantileTruthKLLPreprocesado(KLL &kll, double cuantil, double n, vector<dou
 
     double kllEstimate = kll.quantile(cuantil);
     double truthValue = buscarElementoEnArchivo(posTruth,archivoActualSort);
-    double errorValue = (double)abs(truthValue-kllEstimate)/(double)truthValue;
+    double errorValue;
+    if(truthValue!=0) errorValue = (double)abs(truthValue-kllEstimate)/(double)truthValue;
+    else errorValue = (double)abs(truthValue-kllEstimate)/(double)1;
 
     cerr << "Truth: " << truthValue << ", KLL: " << kllEstimate << endl;
 
@@ -236,7 +246,9 @@ void pruebaKLLPreprocesado(KLL kll, unsigned long n,vector<double> cuantilesACon
         double truthValueRank = truthRank.at(i);
         double truthValueQuantile = truthQuantiles.at(i);
         double errorValueRank = (double)abs(truthValueRank-kllEstimateRank)/n;
-        double errorValueQuantile = (double)abs(truthValueQuantile-kllEstimateQuantile)/(double)truthValueQuantile;
+        double errorValueQuantile;
+        if(truthValueQuantile!=0) errorValueQuantile = (double)abs(truthValueQuantile-kllEstimateQuantile)/(double)truthValueQuantile;
+        else errorValueQuantile = (double)abs(truthValueQuantile-kllEstimateQuantile)/(double)1.0;
         rankError.push_back(errorValueRank);
         quantilesError.push_back(errorValueQuantile);
     }
@@ -512,6 +524,8 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     vector<double> parametrosKLL;
     vector<vector<double>> rank; 
     vector<vector<double>> quantile;
+    vector<vector<double>> rankkmin; 
+    vector<vector<double>> quantilekmin;
 
     if(distribucion.at(0)==3){
         if(distribucion.at(1)==1) n = 1000000;
@@ -528,6 +542,44 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
         n = lines-1;
         cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
     }
+
+    // Se define nombre del archivo resultante a partir del archivo o distribución indicada
+    string filenameEspecifications;
+    string filenameEspecificationskmin;
+    if(distribucion.at(0)==0){
+        filenameEspecifications = filenameEspecifications + "Normal";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+        filenameEspecifications = filenameEspecifications + "y";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
+    } else if(distribucion.at(0)==1) {
+        filenameEspecifications = filenameEspecifications + "Gamma";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+        filenameEspecifications = filenameEspecifications + "y";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
+    } else if (distribucion.at(0)==2) {
+        filenameEspecifications = filenameEspecifications + "Exponencial";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+    } else if (distribucion.at(0)==3) {
+        filenameEspecifications = filenameEspecifications + "Power_law";
+        filenameEspecifications = filenameEspecifications + "Archivo" + to_string(distribucion.at(1));
+    } else if (distribucion.at(0)==4) {
+        filenameEspecifications = filenameEspecifications + "Uniforme";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+        filenameEspecifications = filenameEspecifications + "y";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
+    } else if (distribucion.at(0)==5) {
+        filenameEspecifications = filenameEspecifications + "Geometrica";
+        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
+    } else if (distribucion.at(0)==-1) {
+        if(distribucion.size()==2) filenameEspecifications = filenameEspecifications + "preprocesado"; 
+        filenameEspecifications = filenameEspecifications + archivoActual;
+    }
+    
+    filenameEspecificationskmin = filenameEspecifications + "kmin";
+    // se agrega identificadores tanto de epsilon como de delta al nombre del archivo para poder diferenciar
+    // las pruebas con variaciones de estos parametros pero con la misma distribucion (y parametros)
+    filenameEspecifications = filenameEspecifications + "e" + to_string(epsilon) + "d" + to_string(delta);
+
 
     // ahora se procede de manera distinta dependiendo de si se trata de un fichero con trazas o no
     // esto con el fin de ahorrar tiempo de ejecución
@@ -587,6 +639,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     } else {
         for(int i=0;i<numRepeticiones;i++){
             KLL kll1(n,epsilon,delta,c,minK);
+            KLL kllkmin(200);
             vector<double> arrTruth1;
             cout << "Repeticion: " << i+1 << endl;
             //      cout << "SizeinBytes: " << kll1.sizeInBytes() << endl;
@@ -603,6 +656,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                             std::istringstream iss(linea);
                             if (iss >> dato) {
                                 kll1.add(dato);
+                                if(i+1==numRepeticiones) kllkmin.add(dato);
                                 arrTruth1.push_back(dato);
                             }
                         }
@@ -698,10 +752,18 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                     return;
             }
 
+            if(i+1==numRepeticiones){
+                for(int j=0;j<arrTruth1.size();j++){
+                    kllkmin.add(arrTruth1[j]);
+                }
+            }
+
             sort(arrTruth1.begin(), arrTruth1.end());
 
             vector<double> quantilesError1;
             vector<double> rankError1;
+            vector<double> quantilesErrorkmin;
+            vector<double> rankErrorkmin;
 
             pruebaKLL(kll1,arrTruth1,epsilon,delta,n,consultaCuantiles,rankError1,quantilesError1);
             rank.push_back(rankError1);
@@ -716,41 +778,23 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                     if(arrTruth1[j]==arrTruth1[j+1]) numElementosRepetidos++;
                 }
                 parametrosKLL.push_back(numElementosRepetidos); // num de valores repetidos
+                
+                pruebaKLL(kllkmin,arrTruth1,epsilon,delta,n,consultaCuantiles,rankErrorkmin, quantilesErrorkmin);
+
+                string puntoBin = ".bin";
+                string carpetaBin = "kllbin/";
+                parametrosKLL.push_back(kllkmin.saveData(carpetaBin+filenameEspecificationskmin+"kmin"+puntoBin));
+
+                rankkmin.push_back(rankErrorkmin);
+                quantilekmin.push_back(quantilesErrorkmin);
+
+                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin);
+
+                parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications+puntoBin);
             } 
             
             
         }
-    }
-
-    // Se define nombre del archivo resultante a partir del archivo o distribución indicada
-    string filenameEspecifications;
-    if(distribucion.at(0)==0){
-        filenameEspecifications = filenameEspecifications + "Normal";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
-        filenameEspecifications = filenameEspecifications + "y";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
-    } else if(distribucion.at(0)==1) {
-        filenameEspecifications = filenameEspecifications + "Gamma";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
-        filenameEspecifications = filenameEspecifications + "y";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
-    } else if (distribucion.at(0)==2) {
-        filenameEspecifications = filenameEspecifications + "Exponencial";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
-    } else if (distribucion.at(0)==3) {
-        filenameEspecifications = filenameEspecifications + "Power_law";
-        filenameEspecifications = filenameEspecifications + "Archivo" + to_string(distribucion.at(1));
-    } else if (distribucion.at(0)==4) {
-        filenameEspecifications = filenameEspecifications + "Uniforme";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
-        filenameEspecifications = filenameEspecifications + "y";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(2));
-    } else if (distribucion.at(0)==5) {
-        filenameEspecifications = filenameEspecifications + "Geometrica";
-        filenameEspecifications = filenameEspecifications + to_string(distribucion.at(1));
-    } else if (distribucion.at(0)==-1) {
-        if(distribucion.size()==2) filenameEspecifications = filenameEspecifications + "preprocesado"; 
-        filenameEspecifications = filenameEspecifications + archivoActual;
     }
     
     cout << "Quantile: " << endl;
@@ -759,9 +803,6 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
              << ": " << quantile.at(0).at(i)
              << endl;
     }
-    // se agrega identificadores tanto de epsilon como de delta al nombre del archivo para poder diferenciar
-    // las pruebas con variaciones de estos parametros pero con la misma distribucion (y parametros)
-    filenameEspecifications = filenameEspecifications + "e" + to_string(epsilon) + "d" + to_string(delta);
 
     cerr << "RANK!!!!:" << endl;
     cerr << "QUANTILE!!!!:" << endl;
@@ -847,7 +888,7 @@ void probarVariacionDistribucion(unsigned long n, double epsilon, double delta, 
     return;
 }
 
-void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl){
+void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl, uint32_t espacioLimitado){
     if(distribucion.size()==0||consultaCuantiles.size()==0){
         cout << "no indica distribución o cuantiles a consultar." << endl;
         return;
@@ -876,7 +917,8 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     n = lines-1;
     cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
     
-    KLL kll1 = isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
+    // REVISAR MAIN
+    KLL kll1 = limiteEspacio ? isMrl ? KLL(mrlKmin) : KLL(espacioLimitado,n) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
 
     std::ifstream archivo(archivoActualTxt);
     std::string linea;
@@ -1027,21 +1069,37 @@ void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza,
 
     obtenerTruthRankQuantileArchivoPreprocesado(n, consultaCuantiles, elementosConsulta, truthRank, truthQuantile);
 
+    if(limiteEspacio){
+        // Pruebas KLL con Espacio Limitado
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(0));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(1));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(2));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(3));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(4));
+        // pruebas MRL con Espacio Limitado
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(0));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(1));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(2));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(3));
+        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(4));
+
+        return;
+    }
     cout << "prueba preprocesado" << endl;
     cout << "VARIACIONES DELTA:" << endl; // epsilon constante = 0.05
-    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.05,0.001000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.05,0.000100,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.05,0.000010,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.05,0.000001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
+    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.05,0.001000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.05,0.000100,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.05,0.000010,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.05,0.000001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
     cout << "VARIACIONES EPSILON:" << endl << endl; // delta constante = 0.0001
-    pruebaPreprocesado(n,0.100,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.050,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.025,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.010,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
-    pruebaPreprocesado(n,0.005,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl);
+    pruebaPreprocesado(n,0.100,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.050,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.025,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.010,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
+    pruebaPreprocesado(n,0.005,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
     cout << "VARIACIONES MRL:" << endl << endl; // MRL con k=mrlMink especificado en variable global
-    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl);
+    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,0);
 }
 
 int main(int argc, char*argv[]){
@@ -1157,8 +1215,9 @@ int main(int argc, char*argv[]){
         }
     }
 
-    /*
+    
     // Realizar pruebas con los datos sinteticos
+    /*
     cout << "MEDIA: 1000, DESVIACIÓN ESTANDAR: 100" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionNormal1000y100,consultaCuantiles,numRepeticiones);
     cout << "MEDIA: 50, DESVIACIÓN ESTANDAR: 10" << endl;
@@ -1198,10 +1257,8 @@ int main(int argc, char*argv[]){
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGeometrica0p5,consultaCuantiles,numRepeticiones);
     cout << "GEOMETRICA LAMDA: 1.0" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGeometrica1p0,consultaCuantiles,numRepeticiones);
-    
     cout << "GEOMETRICA LAMDA: 1.5" << endl;
     probarVariacionDistribucion(n,0.05,0.01,c,distribucionGeometrica1p5,consultaCuantiles,numRepeticiones);
-    
     */
 
     return 0;

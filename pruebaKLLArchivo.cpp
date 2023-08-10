@@ -60,46 +60,37 @@ int main(int argc, char*argv[]){
         std::cout << "No se pudo abrir el archivo: " << nombreArchivo << std::endl;
         return 0;
     }
-    /*
-    vector<uint64_t> vectorRank = {10,20};
-    vector<double> vectorDouble = {10.0,20.0};
-    uint64_t kll1rank = kll1.rank(50.0); 
-    vector<uint64_t> vectorkll1rank = kll1.rank(vectorDouble); 
-    cout << "KLL Rank: " << kll1rank << endl;
-    */
-    /*
-    cout << kll1.sizeInBytes() << endl;
-    kll1.print();
-    */
     
     vector<double> ranks = {0,49, 499, 4999, 9999};
     vector<double> quantiles = {1,10,25, 50, 75, 90,99};
     vector<uint64_t> resultadoRanks = kll.rank(ranks);
     vector<double> resultadoQuantiles = kll.quantile(quantiles);
 
-    /*
-    cout << "RANKS INDIVIDUAL" << endl;
-    for(int i = 0;i<ranks.size();i++){
-        cout << "Rank " << i <<": " << kll.rank(ranks[i]) << endl;
-    }
-    cout << "RANKS GRUPAL" << endl;
-    for(int i = 0;i<resultadoRanks.size();i++){
-        cout << "Rank " << i <<": " << resultadoRanks[i] << endl;
-    }
-    cout << "QUANTILES INDIVIDUAL" << endl;
-    for(int i = 0;i<quantiles.size();i++){
-        cout << "Quantile " << i <<": " << kll.quantile(quantiles[i]) << endl;
-    }
-    cout << "QUANTILES GRUPAL" << endl;
-    for(int i = 0;i<resultadoQuantiles.size();i++){
-        cout << "Quantile " << i <<": " << resultadoQuantiles[i] << endl;
-    }
-    */
     
-    cout << endl << "KLL" << endl << endl;
+    cout << "Merge Result MRL (merge consigo mismo):" << endl;
+    KLL mergekllkmin = kllkmin.kllMerge(kllkmin);
+    cout << "print:" << endl;
+    mergekllkmin.print();   
+
+    cerr << "KLL Tradicional:" << endl;
+    kll.print();
+    cout << "Merge Result KLL Tradicional (merge consigo mismo):" << endl;
+    KLL mergekll = kll.kllMerge(kll);
+    cout << "print:" << endl;
+    mergekll.print();
+
+    cout << "Estimación num Elementos en rango [1307777537,2232238616] es: " << kll.numElementosRango(1307777537,2232238616) << endl;
+    cout << "Estimación num Elementos en rango [2607777537,3532238616] es: " << kll.numElementosRango(2607777537,3532238616) << endl;
+
+
+    cout << endl << "SAVE AND LOAD OF KLL WITH BINARY FILE" << endl << endl;
     kll.print();
     kll.saveData("kll.bin");
     KLL kllres = kll.readData("kll.bin");
+    if(kll.areEqual(kllres)) cout << "KLL y KLL.bin son iguales" << endl;
+    else cout << "KLL y KLL.bin NO son iguales" << endl;
+    cout << "KLL" << endl;
+    kll.print();
     cout << "KLL res" << endl;
     kllres.print();
     
@@ -107,6 +98,10 @@ int main(int argc, char*argv[]){
     kllkmin.print();
     kllkmin.saveData("kllkmin.bin");
     KLL kllkminres = kllkmin.readData("kllkmin.bin");
+    if(kllkmin.areEqual(kllkminres)) cout << "MRL y MRL.bin son iguales" << endl;
+    else cout << "KLL y KLL.bin NO son iguales" << endl;
+    cout << "KLLKMIN" << endl;
+    kllkmin.print();
     cout << "KLLkmin res" << endl;
     kllkminres.print();
 
