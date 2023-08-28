@@ -1,7 +1,9 @@
-// g++ -o kllplaw kllplaw.cpp kll.hpp kll.cpp -std=c++11 -I/usr/local/include/DataSketches/
+// g++ -o kllplaw kllplaw.cpp streamsketch.hpp streamsketch.cpp kll.hpp kll.cpp -std=c++11 -I/usr/local/include/DataSketches/
 //         k        numFractions  Archivo
-// ./kllplaw 200      10            data/Chicago-20080319.txt
+// ./kllplaw 200      10            Chicago-20080319.txt
 // ./kllplaw 200      10            Mendeley.txt
+// ./kllplaw 200      10            Mawi-20161201.txt
+// gdb -ex=r --args kllplaw 200 10 Mendeley.txt
 
 // Pasar el archivo al chome
 // scp kllplaw.cpp lkraemer2018@chome.inf.udec.cl:/home/lkraemer2018/
@@ -21,7 +23,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "kll.hpp"
+#include "streamsketch.hpp"
 
 #include <kll_sketch.hpp>
 
@@ -141,8 +143,20 @@ int main(int argc, char **argv) {
         n = lines-1;
         cout << "En en el archivo " << fichero << " hay " << n << " lineas" << endl;
 
-    KLL kll(n,0.05,0.001,2.0/3.0,20);
-    KLL kllkmin(200);
+    //KLL kll(n,0.05,0.001,2.0/3.0,20);
+    //KLL kllkmin(200);
+    
+    double epsilon = 0.05;
+    double delta = 0.001;
+    double c=2.0/3.0;
+    uint64_t lineaActual = 0;
+    KLL kllUno(n,epsilon,delta,c,20);
+    vector<KLL> kllParticionado;
+    for(int i=0;i<4;i++) kllParticionado.push_back(KLL(n/4,epsilon,delta,c,20));
+
+    // StreamSketch klleps(n/5,0.01,2.0/3.0,2);
+    // cerr << "KLLEPS" << endl;
+    // StreamSketch mrleps(0.01,n/5);
 
     std::ifstream archivo(fichero);
     std::string linea;
@@ -152,8 +166,16 @@ int main(int argc, char **argv) {
             std::istringstream iss(linea);
             if (iss >> dato) 
                 //cerr << dato;
-                kll.add(dato);
-                kllkmin.add(dato);
+                //kll.add(dato);
+                //kllkmin.add(dato);
+                // klleps.add(dato);
+                // mrleps.add(dato);
+                kllUno.add(dato);
+                if(lineaActual<(n/4)) kllParticionado.at(0).add(dato);
+                else if(lineaActual<(n/2)) kllParticionado.at(1).add(dato);
+                else if(lineaActual<(3*n/4)) kllParticionado.at(2).add(dato);
+                else if(lineaActual<(n)) kllParticionado.at(3).add(dato);
+                lineaActual++;
         }
         archivo.close();
     } else {
@@ -161,22 +183,34 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    kll.saveData("kll.bin");
-    KLL kllres = kll.readData("kll.bin");
+    KLL kllFinal = kllParticionado.at(0).kllMerge(kllParticionado.at(1));
+    kllFinal = kllFinal.kllMerge(kllParticionado.at(2));
+    kllFinal = kllFinal.kllMerge(kllParticionado.at(3));
+
+    //kll.saveData("kll.bin");
+    //KLL kllres = kll.readData("kll.bin");
     //kllkmin.saveData("kllkmin.bin");
     //KLL kllkminres = kllkmin.readData("kllkmin.bin");
 
     vector<uint64_t> rankElements, rankkminElements;
     vector<double> quantileElements, quantilekminElements;
 
-    quantileElements = kll.quantile(consulta);
-    rankElements = kll.rank(quantileElements);
-    quantilekminElements = kllkmin.quantile(consulta);
-    rankkminElements = kllkmin.rank(quantilekminElements);
+    // quantileElements = kll.quantile(consulta);
+    // rankElements = kll.rank(quantileElements);
+    // quantilekminElements = kllkmin.quantile(consulta);
+    // rankkminElements = kllkmin.rank(quantilekminElements);
+    // quantileElements = klleps.quantile(consulta);
+    // rankElements = klleps.rank(quantileElements);
+    // quantilekminElements = mrleps.quantile(consulta);
+    // rankkminElements = mrleps.rank(quantilekminElements);
+    quantileElements = kllUno.quantile(consulta);
+    rankElements = kllUno.rank(quantileElements);
+    quantilekminElements = kllFinal.quantile(consulta);
+    rankkminElements = kllFinal.rank(quantilekminElements);
 
-    cout << "KLL: " << endl << kll.sizeInBytes() << endl;
+    //cout << "KLL: " << endl << kll.sizeInBytes() << endl;
     //kll.print();
-    cout << "KLL_KMIN: " << endl << kllkmin.sizeInBytes() << endl;
+    //cout << "KLL_KMIN: " << endl << kllkmin.sizeInBytes() << endl;
     //kllkmin.print();
 
     /*
@@ -275,19 +309,27 @@ int main(int argc, char **argv) {
     cout << "QUANTILE:" << endl;
     for(int i=0;i<nfrac+1;i++){
       if(!incluirTruthValues) 
-        printf("%d\t cuantil %lf\t kll %lf\t kllkmin %lf\t datasketches %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i]);
+        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i]);
       else
-        printf("%d\t cuantil %lf\t kll %lf\t kllkmin %lf\t datasketches %lf\t truth %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i], truthQuantile.at(i));
+        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\t truth %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i], truthQuantile.at(i));
       
     }
 
     cout << endl << "RANK:" << endl;
     for(int i=0;i<nfrac+1;i++){
       if(!incluirTruthValues) 
-        printf("%d\t cuantil %lf\t kll %lf\t kllkmin %lf \t datasketches %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]));
+        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]));
       else 
-        printf("%d\t cuantil %lf\t kll %lf\t kllkmin %lf \t datasketches %lf\t truth %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]), (double)truthRank.at(i)/(double)n);
+        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\t truth %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]), (double)truthRank.at(i)/(double)n);
     }
+
+    cout << "KLL UNO:" << endl;
+    kllUno.print();
+    cout << endl << endl << "KLL Merged:" << endl;
+    kllFinal.print();
+    // klleps.printNumSketches();
+    // mrleps.printNumSketches();
+
     /*
     std::cout<<" i quantile(fractions) value_in_sortedstream_for_quantile\n";
     for(int i=0; i<nfrac+1; i++){

@@ -1,10 +1,13 @@
-// g++ main.cpp kll.cpp kll.hpp -o main
+// g++ main.cpp streamsketch.hpp streamsketch.cpp kll.cpp kll.hpp -o main
 // ./main 0 Chicago-20080319.txt Chicago-20080515.txt Chicago-20110608.txt Chicago-20150219.txt Chicago-20160121.txt
 // ./main 0 Mawi-20161201.txt Mawi-20171101.txt Mawi-20181201.txt Mawi-20191102.txt Mawi-20200901.txt
 // ./main 0 Mendeley.txt Sanjose-20081016.txt
+// ./main 0 Chicago-20080319.txt Mendeley.txt
 // nohup ./main 0 Chicago-20080319.txt Chicago-20080515.txt Chicago-20110608.txt Chicago-20150219.txt Chicago-20160121.txt Mawi-20161201.txt Mawi-20171101.txt Mawi-20181201.txt Mawi-20191102.txt Mawi-20200901.txt Mendeley.txt Sanjose-20081016.txt &
 // nohup ./main &
-// nohup ./main 0 Chicago-20080319.txt &
+// nohup ./main 0 Chicago-20080319.txt Mendeley.txt &
+// gdb -ex=r --args main 0 Mendeley.txt
+// gdb -ex=r --args main 0 Mawi-20200901.txt
 
 #include <iostream>
 #include <vector>
@@ -21,7 +24,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "kll.hpp"
+#include "streamsketch.hpp"
 
 using namespace std;
 
@@ -44,7 +47,8 @@ string archivoActualMuestra = "";
 string archivoActualSort = "";
 string archivoActualSortData = "";
 
-bool limiteEspacio = true;
+string determinedEpsilonPrefix = "";
+bool limiteEspacio = false;
 vector<uint32_t> valoresEspacioLimite = {5000, 7500, 10000, 15000, 20000};
 
 void quantiles(KLL &kll, int numQuantiles){
@@ -256,6 +260,41 @@ void pruebaKLLPreprocesado(KLL kll, unsigned long n,vector<double> cuantilesACon
     return;
 }
 
+void pruebaKLLPreprocesado(StreamSketch kll, unsigned long n,vector<double> cuantilesAConsultar,vector<double> &rankError,vector<double> &quantilesError, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantiles){
+    vector<double> kllquantile = kll.quantile(cuantilesAConsultar);
+    vector<uint64_t> kllrank = kll.rank(elementosConsulta);
+    /*
+    cerr << "consultas kll listos" << endl;
+
+    for(int i=0;i<cuantilesAConsultar.size();i++){
+        cerr << elementosConsulta.at(i) << endl;
+    }
+
+    for(int i=0;i<cuantilesAConsultar.size();i++){
+        cerr << kllrank.at(i) << endl;
+        cerr << kllquantile.at(i) << endl;
+        cerr << truthRank.at(i) << endl;
+        cerr << truthQuantiles.at(i) << endl;
+    }
+    */
+
+    for(int i=0;i<cuantilesAConsultar.size();i++){
+        //cerr << i << endl;
+        double kllEstimateRank = kllrank.at(i);
+        double kllEstimateQuantile = kllquantile.at(i);
+        double truthValueRank = truthRank.at(i);
+        double truthValueQuantile = truthQuantiles.at(i);
+        double errorValueRank = (double)abs(truthValueRank-kllEstimateRank)/n;
+        double errorValueQuantile;
+        if(truthValueQuantile!=0) errorValueQuantile = (double)abs(truthValueQuantile-kllEstimateQuantile)/(double)truthValueQuantile;
+        else errorValueQuantile = (double)abs(truthValueQuantile-kllEstimateQuantile)/(double)1.0;
+        rankError.push_back(errorValueRank);
+        quantilesError.push_back(errorValueQuantile);
+    }
+
+    return;
+}
+
 vector<uint64_t> ranksEnArchivo(vector<double> elementos){
     vector<uint64_t> ranks;
     std::ifstream archivo(archivoActualSort);
@@ -347,10 +386,10 @@ void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKL
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "resultados/";
     // Nombre del archivo de salida
-    std::string filenameParametros = nombreCarpeta+"datos"+filenameEspecifications+"Parametros.txt";
-    std::string filenameConsulta = nombreCarpeta+"datos"+filenameEspecifications+"Consulta.txt";
-    std::string filenameRank = nombreCarpeta+"datos"+filenameEspecifications+"Rank.txt";
-    std::string filenameQuantile = nombreCarpeta+"datos"+filenameEspecifications+"Quantile.txt";
+    std::string filenameParametros = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Parametros.txt";
+    std::string filenameConsulta = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Consulta.txt";
+    std::string filenameRank = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Rank.txt";
+    std::string filenameQuantile = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Quantile.txt";
 
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
     std::ofstream outfileParametros(filenameParametros);
@@ -783,14 +822,14 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
 
                 string puntoBin = ".bin";
                 string carpetaBin = "kllbin/";
-                parametrosKLL.push_back(kllkmin.saveData(carpetaBin+filenameEspecificationskmin+"kmin"+puntoBin));
+                parametrosKLL.push_back(kllkmin.saveData(carpetaBin+filenameEspecificationskmin+"kmin"));
 
                 rankkmin.push_back(rankErrorkmin);
                 quantilekmin.push_back(quantilesErrorkmin);
 
                 almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin);
 
-                parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications+puntoBin);
+                parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications);
             } 
             
             
@@ -888,7 +927,7 @@ void probarVariacionDistribucion(unsigned long n, double epsilon, double delta, 
     return;
 }
 
-void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl, uint32_t espacioLimitado){
+void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl, bool epsilonDetermined){
     if(distribucion.size()==0||consultaCuantiles.size()==0){
         cout << "no indica distribución o cuantiles a consultar." << endl;
         return;
@@ -918,7 +957,8 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
     
     // REVISAR MAIN
-    KLL kll1 = limiteEspacio ? isMrl ? KLL(mrlKmin) : KLL(espacioLimitado,n) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
+    //KLL kll1 = epsilonDetermined ? isMrl ? KLL(epsilon, n) : KLL(n, epsilon, c, minK) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
+    StreamSketch kll1 = epsilonDetermined ? isMrl ? StreamSketch(epsilon, n/4) : StreamSketch(n/4, epsilon, c, minK) : isMrl ? StreamSketch(mrlKmin) : StreamSketch(n/4,epsilon,delta,c,minK);
 
     std::ifstream archivo(archivoActualTxt);
     std::string linea;
@@ -941,15 +981,15 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
 
     cerr << "Prueba KLL Preprocesado INICIO" << endl;
 
+    //pruebaKLLPreprocesado(kll1,n,consultaCuantiles,rankError1,quantilesError1,elementosConsulta, truthRank, truthQuantile);    
     pruebaKLLPreprocesado(kll1,n,consultaCuantiles,rankError1,quantilesError1,elementosConsulta, truthRank, truthQuantile);    
     
     cerr << "Prueba KLL Preprocesado FIN" << endl;
     
     parametrosKLL = kll1.parametros();
-    // INCORPORAR UNA MANERA DE DETERMINAR EL RANGO (RESTAR LA ULTIMA LINEA Y EL PRIMER ELEMENTO)
     parametrosKLL.push_back(buscarElementoEnArchivo(0,archivoActualSortData));
-    // INCORPORAR UNA MANERA DE DETERMINAR EL NUMERO DE ELEMENTOS REPETIDOS/DISTINTOS
     parametrosKLL.push_back(buscarElementoEnArchivo(1,archivoActualSortData));
+    parametrosKLL.push_back(n-parametrosKLL.at(parametrosKLL.size()-1));
     // posteriormente se incorpora el espacio ocupado de los datos en binario
 
     rank.push_back(rankError1);
@@ -968,10 +1008,11 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
 
     string puntoBin = ".bin";
     string carpetaBin = "kllbin/";
-    parametrosKLL.push_back(kll1.saveData(carpetaBin+filenameEspecifications+puntoBin));
+    parametrosKLL.push_back(kll1.saveData(carpetaBin+filenameEspecifications));
 
     almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile);
     
+    //kll1.print();
 
     return;
 }
@@ -1070,36 +1111,76 @@ void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza,
     obtenerTruthRankQuantileArchivoPreprocesado(n, consultaCuantiles, elementosConsulta, truthRank, truthQuantile);
 
     if(limiteEspacio){
-        // Pruebas KLL con Espacio Limitado
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(0));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(1));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(2));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(3));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(4));
-        // pruebas MRL con Espacio Limitado
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(0));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(1));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(2));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(3));
-        pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(4));
+        // // Pruebas KLL con Espacio Limitado
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(0));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(1));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(2));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(3));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,valoresEspacioLimite.at(4));
+        // // pruebas MRL con Espacio Limitado
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(0));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(1));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(2));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(3));
+        // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,valoresEspacioLimite.at(4));
 
         return;
     }
-    cout << "prueba preprocesado" << endl;
-    cout << "VARIACIONES DELTA:" << endl; // epsilon constante = 0.05
-    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.05,0.001000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.05,0.000100,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.05,0.000010,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.05,0.000001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    cout << "VARIACIONES EPSILON:" << endl << endl; // delta constante = 0.0001
-    pruebaPreprocesado(n,0.100,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.050,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.025,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.010,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    pruebaPreprocesado(n,0.005,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,0);
-    cout << "VARIACIONES MRL:" << endl << endl; // MRL con k=mrlMink especificado en variable global
-    pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,0);
+    
+    bool notEpsilonDetermined = false;
+    // cout << "prueba preprocesado" << endl;
+    // cout << "VARIACIONES DELTA:" << endl; // epsilon constante = 0.05
+    // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.05,0.001000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.05,0.000100,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.05,0.000010,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.05,0.000001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // cout << "VARIACIONES EPSILON:" << endl << endl; // delta constante = 0.0001
+    // pruebaPreprocesado(n,0.100,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.050,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.025,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.010,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // pruebaPreprocesado(n,0.005,0.0001,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl,notEpsilonDetermined);
+    // cout << "VARIACIONES MRL:" << endl << endl; // MRL con k=mrlMink especificado en variable global
+    // pruebaPreprocesado(n,0.05,0.010000,c,distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl,0);
+
+    //! prueba con epsilon proporcionado
+    double epsilon;
+    bool epsilonDetermined = true;
+    c=2.0/3.0;
+    determinedEpsilonPrefix = "epsilonDetermined";
+
+    c=1.0/2.0;
+    
+    determinedEpsilonPrefix = "epsilonDetermined0.05";
+    epsilon = 0.05;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.01";
+    epsilon = 0.01;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.005";
+    epsilon = 0.005;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.001";
+    epsilon = 0.001;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    
+    // determinedEpsilonPrefix = "epsilonDetermined0.025";
+    // epsilon = 0.025;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    // determinedEpsilonPrefix = "epsilonDetermined0.0075";
+    // epsilon = 0.0075;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    // determinedEpsilonPrefix = "epsilonDetermined0.0025";
+    // epsilon = 0.0025;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
 }
 
 int main(int argc, char*argv[]){
@@ -1167,7 +1248,7 @@ int main(int argc, char*argv[]){
     if(argc>2){
         // si argv[1] == 0 corresponde a un fichero de trazas previamente preprocesado
         // si argv[1] == 1 corresponde a un fichero de trazas previamente preprocesado y con muestra
-        // si argv[1] != 0||1 se hara sort de los elementos del fichero (toma más tiempo)
+        // si argv[1] != 0||1 se hara sort de los elementos del fichero (tomara más tiempo)
         vector<double> distribucionArchivoTraza = generadorConsultaArchivo(stof(argv[1]));
 
         string carpetaPreprocesada = "data/";

@@ -6,12 +6,16 @@ using namespace std;
 class KLL{
     public:
         // Constructores por defecto
-        KLL(uint64_t numElements, double epsilonParam, double deltaParam, double cParam, int minKp); // KLL Tradicional
-        KLL(uint64_t espacioMaximo, uint64_t numElementosParam, double cParam, int minKp, uint32_t maxKp); // KLL Tradicional con Espacio Maximo dado para abarcar un numElementosParam determinado
-        KLL(uint64_t numElementosParam, double epsilon, double cParam, int minKp); // KLL Tradicional que determina espacio a ocupar según epsilon entregado
+        KLL(uint64_t numElementsParam, double epsilonParam, double deltaParam, double cParam, int minKp); // KLL Tradicional
+        //KLL(uint64_t espacioMaximo, uint64_t numElementsParam, double cParam, int minKp, uint32_t maxKp); // KLL Tradicional con Espacio Maximo dado para abarcar un numElementsParam determinado
+        KLL(uint64_t numElementsParam, double epsilon, double cParam, int minKp); // KLL Tradicional que determina espacio a ocupar según epsilon entregado
         KLL(uint64_t minKP); // MRL
-        KLL(uint64_t espacioMaximo, uint64_t numElementosParam); // MRL con Espacio Maximo dado para abarcar un numElementosParam determinado
-        KLL(double epsilonEntregado, uint64_t numElementosParam); // MRL que determina espacio a ocupar según epsilon entregado
+        KLL(uint64_t espacioMaximo, uint64_t numElementsParam); // MRL con Espacio Maximo dado para abarcar un numElementsParam determinado
+        KLL(double epsilonParam, uint64_t numElementsParam); // MRL que determina espacio a ocupar según epsilon entregado
+
+        KLL(uint64_t numElements, double epsilonParam, double deltaParam, double cParam, int minKp, bool samplerEnMenorNivel); // KLL con espacio constante, variable "samplerEnMenorNivel" indica que H'' debe ser 0
+        
+        KLL(uint64_t H,uint64_t s,uint64_t H_pp,vector<int> sizeNiveles, bool isAnMrl, bool hasLimitedSpace); // MRL/KLL que se le indican los parametros que va a ocupar
 
         ~KLL();
         std::hash<long> hashLong;
@@ -22,7 +26,7 @@ class KLL{
         bool murmurHashSample(double element); // indica si el elemento es seleccionado al samplear
         bool reservoirKLLSample(double element, uint64_t elementWeight);
 
-        bool add(double element); // agregar element al sketch
+        bool add(double element); // agregar element al sketch, retorna true cuando sketch se llenó tras la inserción
         void add(double element, uint32_t elementWeight); // agregar element al sketch
         void addv(double element); // agregar element al sketch
         uint64_t rank(double element); // indica el rank del elemento proporcionado
@@ -54,6 +58,10 @@ class KLL{
         vector<double> parametros();
         void print(); // imprime arreglos
         bool areEqual(KLL);
+        bool hasLimitedSpace();
+        bool hasConstantSpace();
+        bool compaction(long nivel,bool updating); // retorna true cuando el sketch se llena
+        bool iterativeCompaction(long nivelInicial, bool updating);
 
         uint64_t saveData(string outputFileName); // retorna el numero de bytes ocupados en el archivo binario
         KLL readData(string inputFileName); // retorna estructura asociado al archivo proporcionado
@@ -72,12 +80,13 @@ class KLL{
         vector<pair<vector<double>, long> > sketch; // arreglo de arreglos con tamaño decreciente
             // sketch[i].first almacena los vectores donde se almacenan los elementos de nivel i
             // sketch[i].second mantiene el num de elementos ocupados en dicho nivel i
+
+        void constantSpaceCompaction(); // exclusiva para el kll con espacio cte.
         
         // Operaciones
         void addToSampler(double element,uint64_t weight);
         void insertElement(long nivel,double &element);
         void insertCompactionElement(long nivel,double &element,bool updating);
-        bool compaction(long nivel,bool updating);
 
         // variables k y c son ctes. entregadas por el usuario, c esta en rango ]0.5,1[
         uint64_t n; // si bien no pertenece a la cota espacial, es necesario para determinar H
@@ -88,9 +97,10 @@ class KLL{
         uint64_t mascara;
         long wH_pp;
 
-        bool debug = false;
+        bool espacioCte; 
+        bool espacioLimitado;
 
-        void compaction(int level);
+        bool debug = false;
         // operaciones para realizar merge de la estructura
         KLL copy();
         KLL(uint64_t nCopy, double epsilonCopy, double deltaCopy, double cCopy, uint32_t minKCopy, uint64_t numElementosRevisadosCopy, uint64_t numTotalElementosCopy, KLL*); // KLL Tradicional
@@ -98,7 +108,7 @@ class KLL{
         
 
         // para readData
-        KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<double>> niveles, double minElementRead, double maxElementRead);        
-        KLL(uint64_t nRead, double epsilonRead,double deltaRead,double cRead, uint32_t minKRead,uint64_t numTotalElementosRead,unsigned long sampleWeightRead,double sampleElementRead, uint64_t numElementosRevisadosRead,vector<vector<double>> niveles, double minElementRead, double maxElementRead);
+        KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoRead);        
+        KLL(uint64_t nRead, double epsilonRead,double deltaRead,double cRead, uint32_t minKRead,uint64_t numTotalElementosRead,unsigned long sampleWeightRead,double sampleElementRead, uint64_t numElementosRevisadosRead,vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoReadbool, bool espacioCteRead);
 
 };

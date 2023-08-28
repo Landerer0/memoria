@@ -12,26 +12,24 @@ void debugLetra(string string){
 }
 
 using namespace std;
-KLL::KLL(uint64_t numElements, double epsilonParam, double deltaParam, double cParam, int minKp){
 
+// kll sin espacio limitado
+KLL::KLL(uint64_t numElementsParam, double epsilonParam, double deltaParam, double cParam, int minKp){
     isMrl = false;
+    espacioCte = false;
+    espacioLimitado = false;
     minElement = std::numeric_limits<double>::max();
     maxElement = -1*minElement;
 
     minK = minKp;
-    n = numElements;
+    n = numElementsParam;
     epsilon = epsilonParam;
     delta = deltaParam;
     c = cParam;
 
-    H = 1.5*log(epsilon*n); // O(log(epsilon*n))
-    k = 1.5*(double)(1/epsilon) * log(log((1/delta)));
-    s = log(log((1/delta)));
-
-    
-    //H = 1.5*log2(epsilon*n); // O(log(epsilon*n))
-    //k = 1.5*(double)(1/epsilon) * log2(log2((1/delta)));
-    //s = log2(log2((1/delta)));
+    H = 1.0*log2(epsilon*n); // O(log(epsilon*n))
+    k = 1.0*(double)(1/epsilon) * log2(log2((1/delta)));
+    s = log2(log2((1/delta)));
 
     H_p = H-s;
     H_pp = H - ceil((double)log(k) / (double)log((1/c)) ); // H_pp = H - log(k)
@@ -87,39 +85,68 @@ KLL::KLL(uint64_t numElements, double epsilonParam, double deltaParam, double cP
     }
 
     cout << endl;
-
-    //cout << "Cant elementos en Sketch: " << espacioOcupado << " Espacio ocupado: " << espacioOcupado*sizeof(long) << " bytes" <<  endl;
-    
-    //print();
-    //cout << "fin inicialización" << endl;
 }
 
-KLL::KLL(uint64_t minKP){
-    isMrl = true;
+KLL::KLL(uint64_t numElementsParam, double epsilonParam, double cParam, int minKp){ 
+    // KLL Tradicional con espacio determinado por epsilon, delta=0.01
+    isMrl = false;
+    espacioCte = false;
+    espacioLimitado = true;
     minElement = std::numeric_limits<double>::max();
     maxElement = -1*minElement;
-    c=1;
-    
-    wH_pp = pow(2,0);
 
-    mascara = pow(2,0);
+    minK = minKp;
+    n = numElementsParam;
+    epsilon = epsilonParam;
+    delta = 0.01;
+    c = cParam;
+
+    H = 1.0*log2(epsilon*n); // O(log(epsilon*n))
+    k = 1.0*(double)(1/epsilon) * log2(log2((1/delta)));
+    s = log2(log2((1/delta)));
+
+    H_p = H-s;
+    H_pp = H - ceil((double)log(k) / (double)log((1/c)) ); // H_pp = H - log(k)
+    if(H_pp<0) H_pp = 0;
+    wH_pp = pow(2,H_pp);
+
+    mascara = pow(2,H_pp);
     sampleElement=0;
     sampleWeight=0;
 
-    numArreglos = 1;
+    numArreglos = (H - H_pp+1);
     numElementosRevisados = 0;
     numTotalElementos = 0;
-    minK = minKP;
-    k = minK;
     unsigned long long espacioOcupado = 0;
 
     vector<long> sizeTemp;
+    for(int i=H_pp;i<=H;i++){
         unsigned long long cantElementos;
-        cantElementos = minK;
+        if(i>(H-s)) cantElementos = max(k,(long)minK);
+        else cantElementos = max((int)(k*pow(c,H-i-1)),(int)minK);
+        cout << i << " El: " << cantElementos << endl;
         //cout << "cantElementos en arreglo " << i+1 << ": " << cantElementos << endl;
         sizeTemp.push_back(cantElementos);
-    
+    }
 
+    // HACER CALCULO AQUI DEL NUMERO DE ELEMENTOS ABARCADOS, en caso que no abarque aumentar H y H_pp en 1 
+    uint64_t numElementosAbarcados = 0;
+    uint64_t numVecesLlenaCompactor = 1;
+    for(int i=sizeTemp.size()-2;i>=0;i--){
+        numVecesLlenaCompactor = ceil( ((double)sizeTemp.at(i+1)*(double)numVecesLlenaCompactor) / ceil((double)sizeTemp.at(i)/2.0) );
+    }
+    cerr << "numVeces que se llena nivel inferior: " << numVecesLlenaCompactor << endl;
+    uint64_t numElementosTotaleskll = pow(2,H_pp)*numVecesLlenaCompactor;
+    while(numElementosTotaleskll < numElementsParam){
+        cerr << "H: " << H << " H_pp: " << H_pp << " numElementosAbarcados: " << numElementosTotaleskll << "/" << numElementsParam<< endl;
+        H_pp++;
+        H++;
+        wH_pp = pow(2,H_pp);
+        mascara = pow(2,H_pp);
+        numElementosTotaleskll *= 2;
+    }
+    cerr << "H: " << H << " H_pp: " << H_pp << " numElementosAbarcados: " << numElementosTotaleskll << "/" << numElementsParam<< endl;
+    
     // inicializar los vectores de tam k*c^lvl
     for(int i=0;i<sizeTemp.size();i++){
         // el valor por defecto es -1, que indica "vacio"
@@ -134,35 +161,50 @@ KLL::KLL(uint64_t minKP){
         sketch.push_back(toInsert);
     }
 
-    H = 0; 
-    H_p = 0;
-    H_pp = 0;
-    //cout << "PRINTTTTTTTTTTTTTTTTTTT" << endl;
-    //print();
+    cout << "Con N = " << n << " Epsilon = " << epsilon << " Delta = " 
+        << delta << " y 'c' = " << c << " se obtienen los valores:" << endl;
+    cout << "Cantidad de elementos que pasaron la etapa de muestreo (aprox): " << n/(pow(2,H_pp)) << endl;
+    cout << "H: " << H << endl 
+        << "s: " << s << endl
+        << "k: " << k << endl
+        << "H': " << H_p << endl
+        << "H'': " << H_pp << endl
+        << "Num Arreglos: " << (H - H_pp) << endl
+        << "w_H'': " << wH_pp << endl;
+    
+    for(int i=0;i<sketch.size();i++){
+        cout << "Compactor en nivel " << H_pp+i << " tiene capacidad: " << sketch.at(i).first.size() << endl;
+    }
+
+    cout << endl;
 }
 
-KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam, double cParam, int minKp, uint32_t maxKp){
-    cout << "Espacio Maximo: " << espacioMaximo << " NumElementosAAbarcar: " << numElementosParam << endl;
-
+KLL::KLL(uint64_t numElementsParam, double epsilonParam, double deltaParam, double cParam, int minKp, bool samplerEnMenorNivel){
     isMrl = false;
+    espacioCte = true;
+    espacioLimitado = true;
     minElement = std::numeric_limits<double>::max();
     maxElement = -1*minElement;
 
     minK = minKp;
-    //n = numElements;
-    //epsilon = epsilonParam;
-    //delta = deltaParam;
+    n = numElementsParam;
+    epsilon = epsilonParam;
+    delta = deltaParam;
     c = cParam;
 
-    // cambiar a log2 (base2)
-    H = 1.5*log(epsilon*n); // O(log(epsilon*n))
-    k = 1.5*(double)(1/epsilon) * log(log((1/delta)));
-    s = log(log((1/delta)));
+    H = 1.0*log2(epsilon*n); // O(log(epsilon*n))
+    k = 1.0*(double)(1/epsilon) * log2(log2((1/delta)));
+    s = log2(log2((1/delta)));
 
     H_p = H-s;
     H_pp = H - ceil((double)log(k) / (double)log((1/c)) ); // H_pp = H - log(k)
+    cout << "VARIABLES ANTES DE MODIFICARLAS, H: " << H << ", H'': " << H_pp << endl;
     if(H_pp<0) H_pp = 0;
-    wH_pp = pow(2,H_pp); // HACER SHIFTING A LA DERECHA
+    if(samplerEnMenorNivel){
+        H -= H_pp;
+        H_pp = 0;
+    }
+    wH_pp = pow(2,H_pp);
 
     mascara = pow(2,H_pp);
     sampleElement=0;
@@ -205,7 +247,7 @@ KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam, double cParam, int 
         << "k: " << k << endl
         << "H': " << H_p << endl
         << "H'': " << H_pp << endl
-        << "Num Arreglos: " << (H - H_pp) << endl
+        << "Num Arreglos: " << (numArreglos) << endl
         << "w_H'': " << wH_pp << endl;
     
     for(int i=0;i<sketch.size();i++){
@@ -213,14 +255,17 @@ KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam, double cParam, int 
     }
 
     cout << endl;
-}
+} // KLL con espacio constante, variable "samplerEnMenorNivel" indica que H'' debe ser 0
+        
 
-KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam){
-    cout << "Espacio Maximo: " << espacioMaximo << " NumElementosAAbarcar: " << numElementosParam << endl;
+KLL::KLL(uint64_t minKP){ // MRL sin espacioLimitado
+    espacioLimitado = false;
+    espacioCte = false;
     isMrl = true;
     minElement = std::numeric_limits<double>::max();
     maxElement = -1*minElement;
     c=1;
+    epsilon = -1;
     
     wH_pp = pow(2,0);
 
@@ -231,56 +276,14 @@ KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam){
     numArreglos = 1;
     numElementosRevisados = 0;
     numTotalElementos = 0;
-
-    uint64_t numNivelesNecesarios = -1;
-    uint64_t minKNecesario = 0;
-    uint64_t numElementosP = numElementosParam;
-    uint64_t espacioOcupado = espacioMaximo;
-    uint64_t cantElementosPorNivel;
-    bool parametrosEncontrados = false;
-
-    espacioOcupado-=sizeInBytes();
-    uint64_t espacioIteracion = 0;
-    uint64_t espacioPorNivel;
-    while(!parametrosEncontrados){
-        numNivelesNecesarios++;
-
-        uint64_t cantElementosIteracion;
-        cantElementosIteracion = espacioOcupado-sizeof(long)*(numNivelesNecesarios+1);
-        cantElementosIteracion /= ((numNivelesNecesarios+1) * sizeof(double));
-
-        if(cantElementosIteracion < 2){
-            cerr << "ERROR EN LA CREACION DEL MRL" << endl;
-            return;
-        }
-
-        espacioPorNivel = (cantElementosIteracion*sizeof(double))+sizeof(long);
-        uint64_t numElementosAbarcados = 0;
-
-        espacioIteracion=0;
-        for(int i = 0; i<= numNivelesNecesarios;i++){
-            espacioIteracion+=espacioPorNivel;
-        }
-        numElementosAbarcados = cantElementosIteracion*pow(2,numNivelesNecesarios)-1;
-        cerr << "NumNiveles: " << numNivelesNecesarios+1 << " NumElementosAbarcados: " << numElementosAbarcados << "/" << numElementosParam<<endl;
-        cerr << "\t Espacio ocupado: " << espacioIteracion  << "/" << espacioOcupado << " Cantidad de elementos por nivel: " << cantElementosIteracion << " Espacio por nivel: " << espacioPorNivel << " ... " << espacioPorNivel*(numNivelesNecesarios+1) << endl;
-
-        cantElementosPorNivel = cantElementosIteracion;
-        if(numElementosAbarcados>=numElementosParam){
-            parametrosEncontrados = true;
-        }
-    }
-
-    cerr << "Num niveles: " << numNivelesNecesarios+1 << endl;
-    cerr << "cant de elementos por nivel: " << cantElementosPorNivel << endl;
-
-    minK = cantElementosPorNivel;
+    minK = minKP;
     k = minK;
+    unsigned long long espacioOcupado = 0;
 
     vector<long> sizeTemp;
         unsigned long long cantElementos;
         cantElementos = minK;
-        cout << "cantElementos en arreglo : " << cantElementos << endl;
+        //cout << "cantElementos en arreglo " << i+1 << ": " << cantElementos << endl;
         sizeTemp.push_back(cantElementos);
     
 
@@ -303,16 +306,14 @@ KLL::KLL(uint64_t espacioMaximo, uint64_t numElementosParam){
     H_pp = 0;
     //cout << "PRINTTTTTTTTTTTTTTTTTTT" << endl;
     //print();
-
-    sizeInBytes();
 }
 
-KLL::KLL(double epsilonEntregado ,uint64_t numElementosParam){
-    double cotaEspacio = 1.0/epsilonEntregado * log2(1.0/epsilonEntregado) * log2(1.0/epsilonEntregado);
-    uint64_t espacioMaximo = ceil(cotaEspacio);
-    cout << "Epsilon Entregado: " << epsilonEntregado << " Espacio Maximo: " << espacioMaximo << " NumElementosAAbarcar: " << numElementosParam << endl;
-    //desde aqui es el mismo constructor que  KLL(uint64_t espacioMaximo, uint64_t numElementosParam)
+KLL::KLL(uint64_t espacioMaximo, uint64_t numElementsParam){ // MRL que se le entrega el espacio
+    espacioLimitado = true;
+    espacioCte = false;
+    cout << "Espacio Maximo: " << espacioMaximo << " NumElementosAAbarcar: " << numElementsParam << endl;
     isMrl = true;
+    epsilon = -1;
     minElement = std::numeric_limits<double>::max();
     maxElement = -1*minElement;
     c=1;
@@ -323,13 +324,12 @@ KLL::KLL(double epsilonEntregado ,uint64_t numElementosParam){
     sampleElement=0;
     sampleWeight=0;
 
-    numArreglos = 1;
     numElementosRevisados = 0;
     numTotalElementos = 0;
 
     uint64_t numNivelesNecesarios = -1;
     uint64_t minKNecesario = 0;
-    uint64_t numElementosP = numElementosParam;
+    uint64_t numElementosP = numElementsParam;
     uint64_t espacioOcupado = espacioMaximo;
     uint64_t cantElementosPorNivel;
     bool parametrosEncontrados = false;
@@ -357,12 +357,13 @@ KLL::KLL(double epsilonEntregado ,uint64_t numElementosParam){
             espacioIteracion+=espacioPorNivel;
         }
         numElementosAbarcados = cantElementosIteracion*pow(2,numNivelesNecesarios)-1;
-        cerr << "NumNiveles: " << numNivelesNecesarios+1 << " NumElementosAbarcados: " << numElementosAbarcados << "/" << numElementosParam<<endl;
+        cerr << "NumNiveles: " << numNivelesNecesarios+1 << " NumElementosAbarcados: " << numElementosAbarcados << "/" << numElementsParam<<endl;
         cerr << "\t Espacio ocupado: " << espacioIteracion  << "/" << espacioOcupado << " Cantidad de elementos por nivel: " << cantElementosIteracion << " Espacio por nivel: " << espacioPorNivel << " ... " << espacioPorNivel*(numNivelesNecesarios+1) << endl;
 
         cantElementosPorNivel = cantElementosIteracion;
-        if(numElementosAbarcados>=numElementosParam){
+        if(numElementosAbarcados>=numElementsParam){
             parametrosEncontrados = true;
+            n = numElementosAbarcados;
         }
     }
 
@@ -373,10 +374,9 @@ KLL::KLL(double epsilonEntregado ,uint64_t numElementosParam){
     k = minK;
 
     vector<long> sizeTemp;
-        unsigned long long cantElementos;
-        cantElementos = minK;
-        cout << "cantElementos en arreglo : " << cantElementos << endl;
-        sizeTemp.push_back(cantElementos);
+    unsigned long long cantElementos;
+    cantElementos = minK;
+    for(int i=0;i<=numNivelesNecesarios;i++) sizeTemp.push_back(cantElementos);
     
 
     // inicializar los vectores de tam k*c^lvl
@@ -393,9 +393,110 @@ KLL::KLL(double epsilonEntregado ,uint64_t numElementosParam){
         sketch.push_back(toInsert);
     }
 
-    H = 0; 
+    H = numNivelesNecesarios; 
     H_p = 0;
     H_pp = 0;
+    numArreglos = H-H_pp+1;
+    //cout << "PRINTTTTTTTTTTTTTTTTTTT" << endl;
+    //print();
+
+    sizeInBytes();
+}
+
+KLL::KLL(double epsilonParam ,uint64_t numElementsParam){
+    espacioCte = false;
+    double cotaEspacio = 1.0/epsilonParam * log2(1.0/epsilonParam) * log2(1.0/epsilonParam);
+    uint64_t espacioMaximo = ceil(cotaEspacio);
+    cout << "Epsilon Entregado: " << epsilonParam << " Espacio Maximo: " << espacioMaximo << " NumElementosAAbarcar: " << numElementsParam << endl;
+    //desde aqui es el mismo constructor que  KLL(uint64_t espacioMaximo, uint64_t numElementsParam)
+    espacioLimitado = true;
+    isMrl = true;
+    epsilon = epsilonParam;
+    minElement = std::numeric_limits<double>::max();
+    maxElement = -1*minElement;
+    c=1;
+    
+    wH_pp = pow(2,0);
+
+    mascara = pow(2,0);
+    sampleElement=0;
+    sampleWeight=0;
+
+    numArreglos = 1;
+    numElementosRevisados = 0;
+    numTotalElementos = 0;
+
+    uint64_t numNivelesNecesarios = -1;
+    uint64_t minKNecesario = 0;
+    uint64_t numElementosP = numElementsParam;
+    uint64_t espacioOcupado = espacioMaximo;
+    uint64_t cantElementosPorNivel;
+    bool parametrosEncontrados = false;
+
+    espacioOcupado-=sizeInBytes();
+    uint64_t espacioIteracion = 0;
+    uint64_t espacioPorNivel;
+    while(!parametrosEncontrados){
+        numNivelesNecesarios++;
+
+        uint64_t cantElementosIteracion;
+        cantElementosIteracion = espacioOcupado-sizeof(long)*(numNivelesNecesarios+1);
+        cantElementosIteracion /= ((numNivelesNecesarios+1) * sizeof(double));
+
+        if(cantElementosIteracion < 2){
+            cerr << "ERROR EN LA CREACION DEL MRL" << endl;
+            return;
+        }
+
+        espacioPorNivel = (cantElementosIteracion*sizeof(double))+sizeof(long);
+        uint64_t numElementosAbarcados = 0;
+
+        espacioIteracion=0;
+        for(int i = 0; i<= numNivelesNecesarios;i++){
+            espacioIteracion+=espacioPorNivel;
+        }
+        numElementosAbarcados = cantElementosIteracion*pow(2,numNivelesNecesarios)-1;
+        cerr << "NumNiveles: " << numNivelesNecesarios+1 << " NumElementosAbarcados: " << numElementosAbarcados << "/" << numElementsParam<<endl;
+        cerr << "\t Espacio ocupado: " << espacioIteracion  << "/" << espacioOcupado << " Cantidad de elementos por nivel: " << cantElementosIteracion << " Espacio por nivel: " << espacioPorNivel << " ... " << espacioPorNivel*(numNivelesNecesarios+1) << endl;
+
+        cantElementosPorNivel = cantElementosIteracion;
+        if(numElementosAbarcados>=numElementsParam){
+            parametrosEncontrados = true;
+            n = numElementosAbarcados;
+        }
+    }
+
+    cerr << "Num niveles: " << numNivelesNecesarios+1 << endl;
+    cerr << "cant de elementos por nivel: " << cantElementosPorNivel << endl;
+
+    minK = cantElementosPorNivel;
+    k = minK;
+
+    
+    vector<long> sizeTemp;
+    unsigned long long cantElementos;
+    cantElementos = minK;
+    for(int i=0;i<=numNivelesNecesarios;i++) sizeTemp.push_back(cantElementos);
+    
+
+    // inicializar los vectores de tam k*c^lvl
+    for(int i=0;i<sizeTemp.size();i++){
+        // el valor por defecto es -1, que indica "vacio"
+        unsigned long long cantElementos = sizeTemp.at(i);
+        espacioOcupado += cantElementos;
+        //cerr << "Cantidad Elementos arreglo " << i << " (nivel " << i+H_pp+1 <<") :" << cantElementos<< endl;
+        double valorElemento = -2;
+        vector<double> vectorAtLvlI(cantElementos,valorElemento); 
+        pair<vector<double>,long> toInsert;
+        toInsert.first=vectorAtLvlI;
+        toInsert.second=0; // representa el num de elementos ocupados en el arreglo
+        sketch.push_back(toInsert);
+    }
+
+    H = numNivelesNecesarios; 
+    H_p = 0;
+    H_pp = 0;
+    numArreglos = H-H_pp+1;
     //cout << "PRINTTTTTTTTTTTTTTTTTTT" << endl;
     //print();
 
@@ -418,8 +519,10 @@ void KLL::insertCompactionElement(long nivel,double &element, bool updating){
     
     // if(updating) cout << "inicio insert " << element << endl;
     long posAInsertar = sketch.at(nivel).second;
-    if(nivel+1==numArreglos && posAInsertar == sketch.at(nivel).first.size()) cerr << "error" << endl;
+    if(nivel+1==numArreglos && posAInsertar == sketch.at(nivel).first.size()) cerr << "error insertCompactionElement" << endl;
     
+    //if(updating) cerr << "nivel " << nivel<<"/"<<numArreglos << ", posAInsertar: " << posAInsertar<<"/"<<sketch.at(nivel).first.size() << endl;
+
     sketch.at(nivel).first.at(posAInsertar) = element;
     sketch.at(nivel).second++;
     
@@ -432,9 +535,180 @@ void KLL::insertCompactionElement(long nivel,double &element, bool updating){
             numArreglos++;
             H++;
         }
-        compaction(nivel,updating);
+        //compaction(nivel,updating);
+        iterativeCompaction(nivel,updating);
         posAInsertar = sketch.at(nivel).second;
     }
+}
+
+void KLL::constantSpaceCompaction(){
+    // crear vector< pair<vector<double>,long > >
+    vector<pair<vector<double>, long> > auxSketch = sketch;
+
+    // vaciar/limpiar sketch
+    for(int nivel=0;nivel<numArreglos;nivel++){
+        sketch.at(nivel).second = 0;
+        for(int j=0;j<sketch.at(nivel).first.size();j++){
+            sketch.at(nivel).first.at(j)=-2.0;
+        }
+    }
+
+    H++;
+    H_pp++;
+    wH_pp *= 2;
+    mascara *= 2;
+
+    // agregar los elementos de menor nivel al sketch mediante reservoirSampling
+    for(int i=0;i<sketch.at(0).first.size();i++){
+        if(sketch.at(0).first.at(i)>0){
+            if(reservoirKLLSample(sketch.at(0).first.at(i),pow(2,H_pp-1)))
+                insertElement(0,sampleElement);
+        } 
+    }
+
+    // agregar el resto de los elementos desde auxSketch a sketch 
+    for(int nivel=1;nivel<numArreglos;nivel++){
+        for(int i=0;i<auxSketch.at(nivel).second;i++){
+            insertCompactionElement(nivel-1,auxSketch.at(nivel).first.at(i),false);
+        }
+    }
+
+    return;
+}
+
+vector<double> seleccionElementosACompactar(vector<double> &elements){
+    vector<double> toReturn;
+    unsigned char elementosPares = 0;
+        if(rand()%2==0) elementosPares = 0; // se mantienen los elementos pares
+        else elementosPares = 1; // se mantienen los elementos impares
+    
+    // sort de los elementos
+    sort(elements.begin(), elements.end());
+
+    //! Agregar los elementos de mayor a menor (en iterativeCompaction)
+    for(int i=elementosPares;i<elements.size();i+=2){
+        toReturn.push_back(elements.at(i));
+    }
+
+    //! Agregar los elementos de menor a mayor (en iterativeCompaction), PROBLEMA (TEORICO NO CONFIRMADO) CUANDO QUEDA 1 ELEMENTO EN EL COMPACTOR
+    // for(int i=(elements.size()-1)-elementosPares;i>=0;i-=2){
+    //     toReturn.push_back(elements.at(i));
+    // }
+
+    /*
+    // indicar que los elementos fueron vaciados
+    for(int i=0;i<elements.size();i++){
+        elements.at(i)=-1.0;
+    }
+    */
+
+    return toReturn;
+}
+
+bool KLL::iterativeCompaction(long nivelInicial, bool updating){
+    long numElementosOcupados = sketch.at(nivelInicial).second;
+    long numElementosTotales = sketch.at(nivelInicial).first.size();
+    unsigned char elementosPares = 0;
+
+    vector<vector<double>> elementosACompactar;
+    bool seDebeCompactar = false;
+    
+    //print();
+
+    if(numElementosOcupados>=numElementosTotales){
+        if(updating) print();
+        // Veo si se lleno y se tiene espacio limitado
+        if(nivelInicial==H && espacioLimitado && espacioCte){
+            constantSpaceCompaction(); // dejar trabajo de compactacion a constantSpaceCompaction
+            return false;
+        } 
+        else if(nivelInicial==H-H_pp && espacioLimitado && !updating) return true; // indicar que se lleno sketch
+        else if(nivelInicial==H-H_pp){ // se puede agregar un nivel superior
+            vector<double> vectorAtLvlI(sketch.at(nivelInicial).first.size(),-2); 
+            pair<vector<double>,long> toInsert;
+            toInsert.first=vectorAtLvlI;
+            toInsert.second=0; // representa el num de elementos ocupados en el arreglo
+            sketch.push_back(toInsert);
+            cerr << "!!! Se agrego compactor de nivel superior: " << sketch.size()-1 << " ... numElementos:" << numTotalElementos << endl;
+            numArreglos++;
+            H++;
+        }
+        
+        if(updating) cerr << "nivelAgregado:" << nivelInicial << endl;
+        elementosACompactar.push_back(seleccionElementosACompactar(sketch.at(nivelInicial).first));
+        //cerr << "se compactara nivelInicial: " << nivelInicial << endl;
+    } 
+
+    while(!elementosACompactar.empty()){
+        long indiceVector = elementosACompactar.size()-1;
+        //long indiceVectorSize = elementosACompactar.at(indiceVector).size()-1;
+        //cerr << "indiceVector" << indiceVector << endl;
+
+        // 1 saco elemento a insertar en nivel superior
+        if(elementosACompactar.at(indiceVector).empty()){
+            if(updating) cerr << "se vacio nivel " << nivelInicial+indiceVector << endl;
+            if(sketch.at(nivelInicial+indiceVector).first.at(sketch.at(nivelInicial+indiceVector).first.size()-1)!=-1.0) sketch.at(nivelInicial+indiceVector).first.at(sketch.at(nivelInicial+indiceVector).first.size()-1)=-1.0;
+            //for(int i=0;i<sketch.at(nivelInicial+indiceVector).first.size();i++) cerr << sketch.at(nivelInicial+indiceVector).first.at(i) << " ";
+            //cerr << endl;
+            elementosACompactar.pop_back();
+            continue;
+        }
+        double elementoAIngresar = elementosACompactar.at(indiceVector).at( elementosACompactar.at(indiceVector).size()-1 );
+        elementosACompactar.at(indiceVector).pop_back();
+
+        // Ingreso en compactor de nivel superior el elemento 
+        long nivelAIngresar = nivelInicial + indiceVector + 1;
+        long posAInsertar = sketch.at(nivelAIngresar).second;
+        //cerr << "indice a ingresar: " << posAInsertar << "/" << sketch.at(nivelAIngresar).first.size() << endl;
+        sketch.at(nivelAIngresar).first.at(posAInsertar) = elementoAIngresar;
+        sketch.at(nivelAIngresar).second++;
+
+        // elimino elementos asociados del elemento seleccionado
+        long posAEliminar = sketch.at(nivelAIngresar-1).second-1;
+        sketch.at(nivelAIngresar-1).first.at(posAEliminar) = -1.0;
+        sketch.at(nivelAIngresar-1).second--;
+        posAEliminar--;
+        if(posAEliminar>=0){
+            sketch.at(nivelAIngresar-1).first.at(posAEliminar) = -1.0;
+            sketch.at(nivelAIngresar-1).second--;
+        }
+        //cerr << "nivel inferior " << nivelAIngresar-1 << " quedo con pos " << sketch.at(nivelAIngresar-1).second << endl;
+
+        //print();
+
+        // veo si es necesario compactar el nivel superior
+        numElementosOcupados = sketch.at(nivelAIngresar).second;
+        numElementosTotales = sketch.at(nivelAIngresar).first.size();
+        if(numElementosOcupados>=numElementosTotales){
+            
+            // Veo si se lleno y se tiene espacio limitado
+            if(nivelAIngresar==H-H_pp && espacioLimitado && espacioCte){
+                    constantSpaceCompaction(); // dejar trabajo de compactacion a constantSpaceCompaction
+                    return false;
+            } 
+            else if(nivelAIngresar==H-H_pp && espacioLimitado & !updating) return true; // indicar que se lleno sketch
+            else if(nivelAIngresar==H-H_pp){ // se puede agregar un nivel superior
+                vector<double> vectorAtLvlI(sketch.at(nivelAIngresar).first.size(),-2); 
+                pair<vector<double>,long> toInsert;
+                toInsert.first=vectorAtLvlI;
+                toInsert.second=0; // representa el num de elementos ocupados en el arreglo
+                sketch.push_back(toInsert);
+                cerr << "!!! Se agrego compactor de nivel superior: " << sketch.size()-1 << " ... numElementos:" << numTotalElementos << endl;
+                numArreglos++;
+                H++;
+            }
+            
+            elementosACompactar.push_back(seleccionElementosACompactar(sketch.at(nivelAIngresar).first));
+        } 
+    }
+    
+    
+    //!
+    // cerr << "FIN COMPACTACION" << endl;
+    // print();
+    
+    
+    return false;
 }
 
 bool KLL::compaction(long nivel, bool updating){
@@ -445,9 +719,19 @@ bool KLL::compaction(long nivel, bool updating){
     long numElementosTotales = sketch.at(nivel).first.size();
     unsigned char elementosPares = 0;
     if(numElementosOcupados>=numElementosTotales){
-        if(nivel+1==numArreglos) return true;
-        /* Caso que se quiera agregar más elementos al sketch
-        if(nivel+1==numArreglos) {
+        //cerr << "NIVEL: " << nivel << "/" << numArreglos-1 << endl;
+        if(espacioLimitado && nivel+1==numArreglos) {
+            if(espacioCte){
+                cerr << "CONSTANT SPACE COMPACTION" << endl;
+                constantSpaceCompaction();
+                return true;
+            }
+            else if(!updating){
+                cout << "Se lleno sketch" << endl;
+                return true;
+            }
+        }
+        else if(nivel+1==numArreglos) {
             vector<double> vectorAtLvlI(sketch.at(nivel).first.size(),-2); 
             pair<vector<double>,long> toInsert;
             toInsert.first=vectorAtLvlI;
@@ -457,7 +741,6 @@ bool KLL::compaction(long nivel, bool updating){
             numArreglos++;
             H++;
         };
-        */
         if(debug) cerr << endl << "compaction " << nivel+1 << endl;
         if(rand()%2==0) elementosPares = 0; // se mantienen los elementos pares
         else elementosPares = 1; // se mantienen los elementos impares
@@ -467,16 +750,23 @@ bool KLL::compaction(long nivel, bool updating){
         
         if(debug) print();
         
-        sketch.at(nivel).second = 0;
+
+        bool siguienteCompactorLleno=false;
+
         // insertar la mitad de elementos (los pares o impares) en el sgte. nivel
         for(int i=elementosPares;i<numElementosTotales;i+=2){
-            insertCompactionElement(nivel+1,sketch.at(nivel).first.at(i),updating);
+            if(sketch.at(nivel+1).second==sketch.at(nivel+1).first.size()) siguienteCompactorLleno=true;
+            if(!siguienteCompactorLleno)insertCompactionElement(nivel+1,sketch.at(nivel).first.at(i),updating);
         }
 
         long nullElement = -1;
         for(int i=0;i<numElementosTotales;i++){
-            sketch.at(nivel).first.at(i) = nullElement;
+            if(!siguienteCompactorLleno) sketch.at(nivel).first.at(i) = nullElement;
         }
+        
+        if(!siguienteCompactorLleno) sketch.at(nivel).second = 0;
+
+        if(siguienteCompactorLleno) return true;
 
         if(debug) cout << "Fin de compaction " << nivel+1 << endl;
         if(debug) print();
@@ -486,6 +776,7 @@ bool KLL::compaction(long nivel, bool updating){
         //numElementosOcupados = sketch.at(nivel).second;
         //numElementosTotales = sketch.at(nivel).first.size();
     }
+    return false;
 }
 
 bool KLL::sample(double element){
@@ -516,7 +807,6 @@ bool KLL::reservoirKLLSample(double element, uint64_t elementWeight){
         sampleWeight = 0;
         return true;
     }
-    // caso merge, revisar
     else if (sampleWeight>wH_pp){
         double heavyElement;
         // sampler discards the heavier item and keeps the lighter item with weight min{w,v}
@@ -546,11 +836,12 @@ bool KLL::add(double element){
     if(element<minElement) minElement = element;
     else if (element>maxElement) maxElement = element;
 
-    if(!reservoirKLLSample(element,1)) return;
+    if(!reservoirKLLSample(element,1)) return false; // como no se agrega un elemento al sketch, este no se llena
     insertElement(0,sampleElement);
     //cout << element << endl;
     numElementosRevisados++; // para metodo quantile
-    return compaction((long) 0, false);
+    //return compaction((long) 0, false);
+    return iterativeCompaction(0, false);
 
     //return;
 }
@@ -568,7 +859,7 @@ void KLL::add(double element, uint32_t elementWeight){
     insertElement(0,sampleElement);
     //cout << element << endl;
     numElementosRevisados+=elementWeight; // para metodo quantile
-    compaction((long) 0, false);
+    iterativeCompaction((long) 0, false);
 
     return;
 }
@@ -576,7 +867,7 @@ void KLL::add(double element, uint32_t elementWeight){
 // add utilizado cuando se hacer merge de KLL
 void KLL::addv(double element){
     insertElement(0,element);
-    compaction((long) 0, false);
+    iterativeCompaction((long) 0, true);
 
     return;
 }
@@ -609,9 +900,9 @@ vector<uint64_t> KLL::rank(vector<double> elements){
     // 3. Se itera para responder el rank de cada elemento
     // 4. Recordar que el rank se multiplica por 2^H_pp
 
-    //for(int i=0;i<elements.size();i++){
-    //    cerr << "Element " << i << ": " << elements[i] << endl;
-    //}
+    // for(int i=0;i<elements.size();i++){
+    //     cerr << "Element " << i << ": " << elements[i] << endl;
+    // }
 
     vector<uint64_t> ranks;
 
@@ -623,7 +914,7 @@ vector<uint64_t> KLL::rank(vector<double> elements){
         uint64_t peso = pow(2,i);
         //for(int j=0;j<sketch.at(i).second;j++){
         for(int j=0;j<sketch.at(i).first.size();j++){
-	    if(sketch.at(i).first.at(j) < 0)continue;
+	        if(sketch.at(i).first.at(j) < 0)continue;
             pair<double, uint64_t> toInsert;
             toInsert.first = sketch.at(i).first.at(j);
             toInsert.second = peso;
@@ -968,6 +1259,23 @@ uint64_t KLL::numElementosRango(double a, double b){
 }
 
 void KLL::update(KLL kll2){
+    // en caso de que algun kll tenga espacioLimitado se realizara la compactación necesaria,
+    // esto se hara de arriba hacia abajo con el fin de evitar choques
+    if(hasLimitedSpace()){
+        for(int i=sketch.size()-1;i>=0;i--){
+            if(sketch.at(i).first.size()==sketch.at(i).second) iterativeCompaction(i,true);
+        }
+    }
+
+    if(kll2.hasLimitedSpace()){
+        for(int i=kll2.getH()-kll2.getH_pp();i>=0;i--){
+            if(kll2.sketchAtLevel(i).first.size()==kll2.sketchAtLevel(i).second){
+                kll2.iterativeCompaction(i,true);
+            }
+        }
+    }
+
+
     pair<double,double> minMaxOtherKLL = kll2.getMinMaxElement();
     if(minElement<minMaxOtherKLL.first) minElement = minMaxOtherKLL.first;
     if(maxElement>minMaxOtherKLL.second) maxElement = minMaxOtherKLL.second;
@@ -980,11 +1288,6 @@ void KLL::update(KLL kll2){
         if(kll2.isAnMrl()){ // KLL 2 es MRL
             for(int nivel=0; nivel<kll2.height();nivel++){
                 pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
-                // cout << "nivel " << nivel << endl;
-                // setSeconds(vector<long>());
-                // cerr << "Elementos1 en nivel " << nivel << ": " << sketch.at(nivel).second << endl;
-                // cerr << "Elementos2 en nivel " << nivel << ": " << kll2pair.second << endl;
-                // para cada elemento dentro del compactor
                 for(int i=0; i < kll2pair.second;i++){
                     if(kll2pair.first.at(i)<0) continue;
                     insertCompactionElement(nivel,kll2pair.first.at(i),true);
@@ -993,18 +1296,48 @@ void KLL::update(KLL kll2){
         }
         else{ // KLL 2 es KLL Tradicional
             pair<unsigned long,double> kll2sample = kll2.getCurrentSample();
-            bool isPowerOf2 = false;
-            unsigned long baseOf2=0;
+            // bool isPowerOf2 = false;
+            // unsigned long baseOf2=0;
             unsigned long kll2SampleWeight = kll2sample.first;
-            if (kll2SampleWeight == 0) isPowerOf2 = false;
-            while (kll2SampleWeight % 2 == 0) {
-                kll2SampleWeight /= 2;
-                baseOf2++;
-            }
-            if (kll2SampleWeight == 1) isPowerOf2=true;
-            if(isPowerOf2) insertCompactionElement(baseOf2, kll2sample.second, true);
-            else {
 
+            //insert elementos del sampler a mrl
+            if (kll2SampleWeight != 0) { // si es 0 no hay que ingresar nada
+                // se calculara el nivel correspondiente en el que insertar el elemento
+                // para ello, se calculara el nivel al que deberia ingresarse segun el peso del sampler
+                // en el que se tomara como relevancia el peso del sampler y de los niveles asociados
+
+                kll2SampleWeight = kll2sample.first;
+                uint64_t nivelSuperior=0; // nivel inferior siempre es (nivelSuperior-1)
+                while (kll2SampleWeight /2 != 0) {
+                    kll2SampleWeight /= 2;
+                    nivelSuperior++;
+                }
+                uint64_t pesoNivelSuperior = 1<<nivelSuperior;
+                uint64_t pesoNivelInferior = 1<<(nivelSuperior-1);
+                
+                double probNivelSuperior = (double) (kll2sample.first-pesoNivelInferior)/(double) (pesoNivelSuperior-pesoNivelInferior);
+                if((double) (rand()/RAND_MAX) <= probNivelSuperior) insertCompactionElement(nivelSuperior, kll2sample.second, true);
+                else insertCompactionElement(nivelSuperior-1, kll2sample.second, true);
+
+                // while (kll2SampleWeight %2 == 0) {
+                //     kll2SampleWeight /= 2;
+                //     baseOf2++;
+                // }
+                // if (kll2SampleWeight == 1) isPowerOf2=true;
+                // if(isPowerOf2) insertCompactionElement(baseOf2, kll2sample.second, true);
+                // else {
+
+                // }
+
+            }
+            
+            //insert elementos de kll a mrl en el nivel respectivo
+            for(int nivel=kll2.getH_pp();nivel<kll2.height(); nivel++){
+                pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
+                for(int i=0; i < kll2pair.second;i++){
+                    if(kll2pair.first.at(i)<0) continue;
+                    insertCompactionElement(nivel,kll2pair.first.at(i),true);
+                }
             }
         }
     } else { // KLL 1 es KLL Tradicional
@@ -1012,7 +1345,7 @@ void KLL::update(KLL kll2){
             // ingresamos elementos asociados al sampler
             int nivel = 0;
             for(nivel; nivel<H_pp;nivel++){
-                if(nivel>=kll2.height()) break; //
+                if(nivel>=kll2.height()) break; // ya se ingresaron todos los niveles
                 pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
                 uint64_t pesoNivel = pow(2,nivel);
                 for(int i=0; i < kll2pair.second;i++){
@@ -1021,48 +1354,78 @@ void KLL::update(KLL kll2){
                 }
             }
 
-            // ingresamos el resto de los elementos
+            // ingresamos el resto de los elementos al compactor asociado
             for(nivel;nivel<kll2.height(); nivel++){
                 pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
                 for(int i=0; i < kll2pair.second;i++){
                     if(kll2pair.first.at(i)<0) continue;
-                    insertCompactionElement(nivel,kll2pair.first.at(i),true);
+                    insertCompactionElement(nivel-H_pp,kll2pair.first.at(i),true);
                 }
             }
         }
         else{ // KLL 2 es KLL tradicional
-            //! PROBLEMA A RESOLVER: QUE OCURRE SI EL SAMPLER DE KLL2 TIENE UN PESO >= A 2**H_PP+1 del sampler KLL1
             int nivel = 0;
-            
-            // agregamos los elementos del sampler kll2 al sampler del kll1
-            if(H_pp<kll2.getH_pp()+2){ // ReservoirSampling acepta pesos desde [1,2^(H_pp+1)[
-                pair<unsigned long,double> sampleOtherKLL = kll2.getCurrentSample();
-                addToSampler(sampleOtherKLL.second,sampleOtherKLL.first);
-            } else { //!CASO PROBLEMA
+            pair<unsigned long,double> kll2sample = kll2.getCurrentSample();
+            unsigned long kll2SampleWeight = kll2sample.first;
+
+            //cerr << "INSERT ELEMENTO DE SAMPLER A SAMPLER" << endl;
+
+            //insert elementos del sampler a kll
+            if(kll2SampleWeight == 0){} // si es 0 no hay que ingresar nada
+            else if(wH_pp < kll2SampleWeight) {  // caso en que el peso es superior a H_pp (se agrega el elemento a un compactor)
+                // se calculara el nivel correspondiente en el que insertar el elemento
+                // para ello, se calculara el nivel al que deberia ingresarse segun el peso del sampler
+                // en el que se tomara como relevancia el peso del sampler y de los niveles asociados
+
+                kll2SampleWeight = kll2sample.first;
+                uint64_t nivelSuperior=0; // nivel inferior siempre es (nivelSuperior-1)
+                while (kll2SampleWeight /2 != 0) {
+                    kll2SampleWeight /= 2;
+                    nivelSuperior++;
+                }
+                uint64_t pesoNivelSuperior = 1<<nivelSuperior;
+                uint64_t pesoNivelInferior = 1<<(nivelSuperior-1);
                 
+                double probNivelSuperior = (double) (kll2sample.first-pesoNivelInferior)/(double) (pesoNivelSuperior-pesoNivelInferior);
+                if((double) (rand()/RAND_MAX) <= probNivelSuperior) insertCompactionElement(nivelSuperior-H_pp, kll2sample.second, true);
+                else insertCompactionElement(nivelSuperior-1-H_pp, kll2sample.second, true);
+            } else { // aqui se agrega el elemento desde kll2_sampler a kll1_sampler
+                addToSampler(kll2sample.second,kll2sample.first);
             }
             
-            // ingresar elementos de KLL 2 a Sampler de KLL 1
+            int nivelesEnSampler=0;
+            int diffH_pp = H_pp - kll2.getH_pp();
+            //cerr << "nivelInsertASampler" << nivel << endl;
+            // ingresar elementos de KLL 2 a Sampler de KLL 1 en caso de ser necesario
             if(H_pp>kll2.getH_pp()){
-                for(nivel=0; nivel<H_pp;nivel++){
+                //cerr << "INSERT ELEMENTO DE KLL2 A SAMPLER" << endl;
+                for(nivel=0; nivel<diffH_pp;nivel++){
                     if(nivel>=kll2.height()) break; //
                     pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
-                    uint64_t pesoNivel = pow(2,nivel);
+                    uint64_t pesoNivel = pow(2,nivel+kll2.getH_pp());
                     for(int i=0; i < kll2pair.second;i++){
                         if(kll2pair.first.at(i)<0) continue;
                         addToSampler(kll2pair.first.at(i),pesoNivel);
                     }
+                    nivelesEnSampler++;
                 }
             }
 
-            int diffH_pp = H_pp - kll2.getH_pp();
+            // cerr << "INSERT ELEMENTO DE COMPACTOR A COMPACTOR" << endl;
+            // cerr << "difH_pp: " << diffH_pp << ", H_pp: " << H_pp << ", kll2H_pp: " << kll2.getH_pp() << endl;
+            // cerr << "H: " << H << ", kll2H: " << kll2.getH() << endl;
+            // cerr << "niveles en sampler: " << nivelesEnSampler << endl;
             // ingresar los elementos de los compactor de KLL 2 a los compactor de KLL1
-            for(nivel=0; nivel<kll2.height();nivel++){
+            for(nivel; nivel<kll2.height();nivel++){
+                //cerr <<  "nivel en kll2: " << nivel<< endl;
                 pair<vector<double>,long> kll2pair = kll2.sketchAtLevel(nivel);
+                //cerr <<  "nivel a ingresar en kll1: " << nivel-nivelesEnSampler << endl;
                 for(int i=0; i < kll2pair.second;i++){
                     if(kll2pair.first.at(i)<0) continue;
-                    insertCompactionElement(nivel-diffH_pp,kll2pair.first.at(i),true);
+                    insertCompactionElement(nivel-nivelesEnSampler,kll2pair.first.at(i),true);
                 }
+                cerr << "nivel:" << nivel-nivelesEnSampler+H_pp << endl;
+                print(); //!
             }
         }
     }
@@ -1105,11 +1468,8 @@ KLL KLL::kllMerge(KLL &kll2){
     }
 
     uint64_t heightKLL1, heightKLL2;
-    heightKLL1 = height();
-    heightKLL2 = kll2.height();
-
-    // SE ME OCURRIO CREAR UN METODO PARA EL CASO QUE NO SEA MRL, EN DONDE SE AGREGUEN LOS ELEMENTOS
-    // AL RESERVOIR SAMPLING HASTA QUE SE LLEGUE AL NIVEL DE HPP EN EL KLL DE MAYOR NIVEL
+    heightKLL1 = H;
+    heightKLL2 = kll2.getH();
 
     // Creamos una copia del kll a devolver
     if(isMrl){
@@ -1174,6 +1534,8 @@ KLL::KLL(uint64_t nCopy, double epsilonCopy, double deltaCopy, double cCopy, uin
     numElementosRevisados = numElementosRevisadosCopy;
     numTotalElementos = numTotalElementosCopy;
     isMrl = false;
+    espacioLimitado = toCopy->hasLimitedSpace();
+    espacioCte = toCopy->hasConstantSpace();
 
     pair<double, double> minMaxElement = toCopy->getMinMaxElement();
     minElement = minMaxElement.first;
@@ -1211,7 +1573,9 @@ KLL::KLL(uint64_t nCopy, double epsilonCopy, double deltaCopy, double cCopy, uin
 // COPIA MRL
 KLL::KLL(uint32_t minKCopy, uint64_t numTotalElementosCopy, KLL* toCopy){
     isMrl = true;
-    
+    espacioLimitado = toCopy->hasLimitedSpace();
+    espacioCte = false;
+
     pair<double, double> minMaxElement = toCopy->getMinMaxElement();
     minElement = minMaxElement.first;
     maxElement = minMaxElement.second;
@@ -1300,6 +1664,7 @@ uint64_t KLL::sizeInBytes(){
     totalSize+=sizeof(wH_pp);
     totalSize+=sizeof(debug);
     totalSize+=sizeof(isMrl);
+    totalSize+=sizeof(espacioLimitado);
     totalSize+=sizeof(minElement);
     totalSize+=sizeof(maxElement);
 
@@ -1338,13 +1703,15 @@ uint64_t KLL::saveData(string outputFileName){
 
 
     // Abrir el archivo en modo binario
-    std::ofstream archivo(outputFileName, std::ios::binary);
+    std::ofstream archivo(outputFileName+"bin", std::ios::binary);
     uint64_t numBytes = 0;
 
     if (archivo) {
         // Almacenamos el tipo de estructura asociado
         archivo.write(reinterpret_cast<const char *>(&isMrl), sizeof(isMrl));
         numBytes += sizeof(isMrl);
+        archivo.write(reinterpret_cast<const char *>(&espacioLimitado), sizeof(espacioLimitado));
+        numBytes += sizeof(espacioLimitado);
         archivo.write(reinterpret_cast<const char *>(&minElement), sizeof(minElement));
         numBytes += sizeof(minElement);
         archivo.write(reinterpret_cast<const char *>(&maxElement), sizeof(maxElement));
@@ -1362,6 +1729,7 @@ uint64_t KLL::saveData(string outputFileName){
             archivo.write(reinterpret_cast<const char *>(&numTotalElementos), sizeof(numTotalElementos));
             archivo.write(reinterpret_cast<const char *>(&sampleWeight), sizeof(sampleWeight));
             archivo.write(reinterpret_cast<const char *>(&sampleElement), sizeof(sampleElement));
+            archivo.write(reinterpret_cast<const char *>(&espacioCte), sizeof(espacioCte));
             
             numBytes += sizeof(n);
             numBytes += sizeof(epsilon);
@@ -1371,6 +1739,7 @@ uint64_t KLL::saveData(string outputFileName){
             numBytes += sizeof(numTotalElementos);
             numBytes += sizeof(sampleWeight);
             numBytes += sizeof(sampleElement);
+            numBytes += sizeof(espacioCte);
         }
 
         // Almacenar datos necesarios numero de niveles y H_pp
@@ -1430,9 +1799,10 @@ uint64_t KLL::saveData(string outputFileName){
 }
 
 // Creacion de MRL a partir de los datos proporcionados en readData
-KLL::KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<double>> niveles, double minElementRead, double maxElementRead){
+KLL::KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoRead){
     uint32_t numNiveles = niveles.size();
     numArreglos = numNiveles;
+    espacioLimitado = espacioLimitadoRead;
     numElementosRevisados = numElementosRevisadosRead;
     numTotalElementos = numElementosRevisadosRead;
     minK = minKRead;
@@ -1443,6 +1813,8 @@ KLL::KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<do
     s = numNiveles;
     minElement = minElementRead;
     maxElement = maxElementRead;
+
+    espacioCte = false;
 
     double valorElementoVacio = -2;
     for(int i=0;i<niveles.size();i++){
@@ -1458,10 +1830,13 @@ KLL::KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<do
 }
 
 // Creacion de KLL tradicional a partir de los datos proporcionados en readData
-KLL::KLL(uint64_t nRead, double epsilonRead,double deltaRead,double cRead, uint32_t minKRead,uint64_t numTotalElementosRead,unsigned long sampleWeightRead,double sampleElementRead, uint64_t numElementosRevisadosRead,vector<vector<double>> niveles, double minElementRead, double maxElementRead){
+KLL::KLL(uint64_t nRead, double epsilonRead,double deltaRead,double cRead, uint32_t minKRead,uint64_t numTotalElementosRead,unsigned long sampleWeightRead,double sampleElementRead, uint64_t numElementosRevisadosRead,vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoRead,bool espacioCteRead){
     isMrl = false;
+    espacioCte = espacioCteRead;
+    espacioLimitado = espacioLimitadoRead;
     minElement = minElementRead;
     maxElement = maxElementRead;
+
 
     minK = minKRead;
     n = nRead;
@@ -1549,6 +1924,8 @@ KLL KLL::readData(string inputFileName){
     // variables asociadas a la lectura de MRL o KLL tradicional
     // MRL y KLL tradicional:
     bool isMrlRead;
+    bool espacioCteRead;
+    bool espacioLimitadoRead;
     double minElementRead, maxElementRead;
     uint32_t minKRead;
     uint32_t numNiveles;
@@ -1564,7 +1941,9 @@ KLL KLL::readData(string inputFileName){
     
     // Lectura de variables del archivo en binario
     archivo.read(reinterpret_cast<char*>(&isMrlRead), sizeof(isMrlRead));
-    cerr << "isMrl " << isMrl << endl;
+    cerr << "isMrl " << isMrlRead << endl;
+    archivo.read(reinterpret_cast<char*>(&espacioLimitadoRead), sizeof(espacioLimitadoRead));
+    cerr << "espacioLimitado " << espacioLimitadoRead << endl;
     archivo.read(reinterpret_cast<char*>(&minElementRead), sizeof(minElementRead));
     cerr << "minElement " << minElementRead << endl;
     archivo.read(reinterpret_cast<char*>(&maxElementRead), sizeof(maxElementRead));
@@ -1589,6 +1968,8 @@ KLL KLL::readData(string inputFileName){
         cerr << "sampleWeightRead " << sampleWeightRead << endl;
         archivo.read(reinterpret_cast<char*>(&sampleElementRead), sizeof(sampleElementRead));
         cerr << "sampleElementRead " << sampleElementRead << endl;
+        archivo.read(reinterpret_cast<char*>(&espacioCte), sizeof(espacioCte));
+        cerr << "espacioCte " << espacioCte << endl;
     }
 
     archivo.read(reinterpret_cast<char*>(&numNiveles), sizeof(numNiveles));
@@ -1616,7 +1997,65 @@ KLL KLL::readData(string inputFileName){
     }
 
     if(isMrl) 
-        return KLL(minKRead, numElementosRevisadosRead, niveles, minElementRead, maxElementRead);
+        return KLL(minKRead, numElementosRevisadosRead, niveles, minElementRead, maxElementRead, espacioLimitadoRead);
     else 
-        return KLL(nRead,epsilonRead,deltaRead,cRead,minKRead,numTotalElementosRead, sampleWeightRead, sampleElementRead, numElementosRevisadosRead, niveles, minElementRead, maxElementRead);
+        return KLL(nRead,epsilonRead,deltaRead,cRead,minKRead,numTotalElementosRead, sampleWeightRead, sampleElementRead, numElementosRevisadosRead, niveles, minElementRead, maxElementRead, espacioLimitadoRead, espacioCteRead);
 }
+
+bool KLL::hasLimitedSpace(){
+    return espacioLimitado;
+}
+
+bool KLL::hasConstantSpace(){
+    return espacioCte;
+}
+
+
+
+// CREACION KLL CON PARAMETROS INDICADOS
+KLL::KLL(uint64_t HParam,uint64_t sParam,uint64_t H_ppParam,vector<int> sizeNivelesParam, bool isAnMrlParam, bool hasLimitedSpaceParam){
+    isMrl = isAnMrlParam;
+    espacioLimitado = hasLimitedSpaceParam;
+    espacioCte = false;
+    H = HParam;
+    s = sParam;
+    H_p = H-sParam;
+    H_pp = H_ppParam;
+    wH_pp = pow(2,H_pp);
+
+    mascara = pow(2,H_pp);
+    sampleElement=0;
+    sampleWeight=0;
+    minElement = std::numeric_limits<double>::max();
+    maxElement = -1*minElement;
+
+    numArreglos = (H - H_pp+1);
+    numElementosRevisados = 0;
+    numTotalElementos = 0;
+
+    uint64_t espacioOcupado = 0;
+
+    minK = sizeNivelesParam.at(0);
+    k = sizeNivelesParam.at(sizeNivelesParam.size()-1);
+
+    // inicializar los vectores de tam k*c^lvl
+    for(int i=0;i<sizeNivelesParam.size();i++){
+        // el valor por defecto es -1, que indica "vacio"
+        unsigned long long cantElementos = sizeNivelesParam.at(i);
+        espacioOcupado += cantElementos;
+        //cerr << "Cantidad Elementos arreglo " << i << " (nivel " << i+H_pp+1 <<") :" << cantElementos<< endl;
+        double valorElemento = -2;
+        vector<double> vectorAtLvlI(cantElementos,valorElemento); 
+        pair<vector<double>,long> toInsert;
+        toInsert.first=vectorAtLvlI;
+        toInsert.second=0; // representa el num de elementos ocupados en el arreglo
+        sketch.push_back(toInsert);
+    }
+
+    string nombreKLL;
+    if(isMrl) nombreKLL = " MRL ";
+    else nombreKLL = " KLL ";
+    cerr << "Se creo" << nombreKLL << "con parametros:" << endl;
+    print();
+
+} // MRL/KLL que se le indican los parametros que va a ocupar

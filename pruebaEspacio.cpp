@@ -1,5 +1,6 @@
 // g++ pruebaEspacio.cpp kll.hpp kll.cpp -o pruebaEspacio
 // ./pruebaEspacio data/Mendeley.txt
+// gdb -ex=r --args pruebaEspacio data/Mendeley.txt
 
 #include <iostream>
 #include <vector>
@@ -42,11 +43,12 @@ int main(int argc, char*argv[]){
     double epsilon = 0.05;
     double delta = 0.001;
     double c = (double) 2/(double) 3;
+    int minK = 2;
 
-    //KLL kll(n,epsilon,delta,c,20);
+    KLL kll(n,epsilon,c,minK);
     //KLL kllkmin(200);
     uint64_t espacio = 20000;
-    KLL mrlEspacio(espacio,n);
+    //KLL mrlEspacio(espacio,n);
     std::ifstream archivo(nombreArchivo);
     std::string linea;
     if(archivo.is_open()) {
@@ -54,8 +56,8 @@ int main(int argc, char*argv[]){
             double dato;
             std::istringstream iss(linea);
             if (iss >> dato) 
-                mrlEspacio.add(dato);
-                //kll.add(dato);
+                //mrlEspacio.add(dato);
+                if(kll.add(dato)) cerr << "kll se llenó";
                 //kllkmin.add(dato);
         }
         archivo.close();
@@ -64,7 +66,10 @@ int main(int argc, char*argv[]){
         return 0;
     }
     
-    cout << "size mrlEspacio: " << mrlEspacio.sizeInBytes() << endl;
+    cout << "size kll: " << kll.sizeInBytes() << endl;
+    kll.print();
+
+    //cout << "size mrlEspacio: " << mrlEspacio.sizeInBytes() << endl;
     //mrlEspacio.print();
 
     return 0;
