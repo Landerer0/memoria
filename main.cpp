@@ -6,6 +6,7 @@
 // nohup ./main 0 Chicago-20080319.txt Chicago-20080515.txt Chicago-20110608.txt Chicago-20150219.txt Chicago-20160121.txt Mawi-20161201.txt Mawi-20171101.txt Mawi-20181201.txt Mawi-20191102.txt Mawi-20200901.txt Mendeley.txt Sanjose-20081016.txt &
 // nohup ./main &
 // nohup ./main 0 Chicago-20080319.txt Mendeley.txt &
+// nohup ./main 0 Chicago-20160121.txt Sanjose-20081016.txt Mawi-20181201.txt Mendeley.txt &
 // gdb -ex=r --args main 0 Mendeley.txt
 // gdb -ex=r --args main 0 Mawi-20200901.txt
 
@@ -20,6 +21,7 @@
 #include <time.h>
 #include <chrono>
 #include <cmath>
+#include <ctime>
 
 #include <fstream>
 #include <sstream>
@@ -382,72 +384,52 @@ vector<double> pruebaKLLMuestraPreprocesado(KLL kll, unsigned long n,vector<doub
 }
 
 void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKLL, vector<double> &consultaCuantiles,int numRepeticiones
-                    , vector<vector<double>> &rank, vector<vector<double>> &quantile){
+                    , vector<vector<double>> &rank, vector<vector<double>> &quantile, double tiempo){
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "resultados/";
     // Nombre del archivo de salida
-    std::string filenameParametros = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Parametros.txt";
-    std::string filenameConsulta = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Consulta.txt";
-    std::string filenameRank = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Rank.txt";
-    std::string filenameQuantile = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Quantile.txt";
+    std::string filename = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Resultados.txt";
 
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
-    std::ofstream outfileParametros(filenameParametros);
-    if (outfileParametros.is_open()) { // parametros (N, epsilon, rango, entre otros)
+    std::ofstream outfile(filename);
+    if (outfile.is_open()) { // parametros (N, epsilon, rango, entre otros)
         for (const auto& element : parametrosKLL) {
-            outfileParametros << element << " ";
+            outfile << element << " ";
         }
-        outfileParametros << std::endl;
-        // Cerrar el archivo
-        outfileParametros.close();
-        std::cout << "Los datos Parametros se han almacenado correctamente en el archivo " << filenameParametros << std::endl;
-    } else {
-        std::cerr << "No se pudo abrir el archivo Parametros " << filenameParametros << " para escritura." << std::endl;
-    }
-    std::ofstream outfileConsulta(filenameConsulta); // consulta (cuantiles consultados)
-    if (outfileConsulta.is_open()) {
+        outfile << "\n";
+        std::cout << "Los datos Parametros se han almacenado correctamente en el archivo " << filename << std::endl;
+        
         for (const auto& element : consultaCuantiles) {
-            outfileConsulta << element << " ";
+            outfile << element << " ";
         }
-        outfileConsulta << std::endl;
-        outfileConsulta.close();
-        std::cout << "Los datos Consulta se han almacenado correctamente en el archivo " << filenameConsulta << std::endl;
-    } else {
-        std::cerr << "No se pudo abrir el archivo Consulta " << filenameConsulta << " para escritura." << std::endl;
-    }
-    if(rank.size()!=0){
-        std::ofstream outfileRank(filenameRank); // rankError obtenido de los experimentos
-        if (outfileRank.is_open()) {
+        outfile << "\n";
+
+        std::cout << "Los datos Consulta se han almacenado correctamente en el archivo " << filename << std::endl;
+    
+        if(rank.size()!=0){
             for (const auto& inner_vector : rank) {
                 for (const auto& element : inner_vector) {
-                    outfileRank << element << " ";
+                    outfile << element << " ";
                 }
-                outfileRank << std::endl; 
+                outfile << std::endl; 
             }
-            outfileRank.close();
-            std::cout << "Los datos rank se han almacenado correctamente en el archivo " << filenameRank << std::endl;
-        } else {
-            std::cerr << "No se pudo abrir el archivo rank " << filenameRank << " para escritura." << std::endl;
+            std::cout << "Los datos rank se han almacenado correctamente en el archivo " << filename << std::endl;
         }
-    }
-    
-    if(quantile.size()!=0){
-        std::ofstream outfileQuantile(filenameQuantile); // errorRelativo obtenido de los experimentos
-        if (outfileQuantile.is_open()) {
+        
+        if(quantile.size()!=0){
             for (const auto& inner_vector : quantile) {
                 for (const auto& element : inner_vector) {
-                    outfileQuantile << element << " ";
+                    outfile << element << " ";
                 }
-                outfileQuantile << std::endl;
+                outfile << std::endl;
             }
-            outfileQuantile.close();
-            std::cout << "Los datos Quantile se han almacenado correctamente en el archivo " << filenameQuantile << std::endl;
-        } else {
-            std::cerr << "No se pudo abrir el archivo Quantile " << filenameQuantile << " para escritura." << std::endl;
-        }    
-    }
-    
+            std::cout << "Los datos Quantile se han almacenado correctamente en el archivo " << filename << std::endl;
+        }
+        
+        outfile << tiempo << endl;
 
+        outfile.close();
+    }
     // imprimir por pantalla los resultados de esta sesion de experimentos, tanto para rank como quantile
     if(rank.size()!=0){
         for(int i=0;i<consultaCuantiles.size();i++){ // rank
@@ -479,6 +461,105 @@ void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKL
         }
     }
 }
+
+// void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKLL, vector<double> &consultaCuantiles,int numRepeticiones
+//                     , vector<vector<double>> &rank, vector<vector<double>> &quantile){
+//     // se define ubicacion resultante de los archivos generados por las pruebas
+//     std::string nombreCarpeta = "resultados/";
+//     // Nombre del archivo de salida
+//     std::string filenameParametros = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Parametros.txt";
+//     std::string filenameConsulta = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Consulta.txt";
+//     std::string filenameRank = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Rank.txt";
+//     std::string filenameQuantile = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Quantile.txt";
+
+//     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
+//     std::ofstream outfileParametros(filenameParametros);
+//     if (outfileParametros.is_open()) { // parametros (N, epsilon, rango, entre otros)
+//         for (const auto& element : parametrosKLL) {
+//             outfileParametros << element << " ";
+//         }
+//         outfileParametros << std::endl;
+//         // Cerrar el archivo
+//         outfileParametros.close();
+//         std::cout << "Los datos Parametros se han almacenado correctamente en el archivo " << filenameParametros << std::endl;
+//     } else {
+//         std::cerr << "No se pudo abrir el archivo Parametros " << filenameParametros << " para escritura." << std::endl;
+//     }
+//     std::ofstream outfileConsulta(filenameConsulta); // consulta (cuantiles consultados)
+//     if (outfileConsulta.is_open()) {
+//         for (const auto& element : consultaCuantiles) {
+//             outfileConsulta << element << " ";
+//         }
+//         outfileConsulta << std::endl;
+//         outfileConsulta.close();
+//         std::cout << "Los datos Consulta se han almacenado correctamente en el archivo " << filenameConsulta << std::endl;
+//     } else {
+//         std::cerr << "No se pudo abrir el archivo Consulta " << filenameConsulta << " para escritura." << std::endl;
+//     }
+//     if(rank.size()!=0){
+//         std::ofstream outfileRank(filenameRank); // rankError obtenido de los experimentos
+//         if (outfileRank.is_open()) {
+//             for (const auto& inner_vector : rank) {
+//                 for (const auto& element : inner_vector) {
+//                     outfileRank << element << " ";
+//                 }
+//                 outfileRank << std::endl; 
+//             }
+//             outfileRank.close();
+//             std::cout << "Los datos rank se han almacenado correctamente en el archivo " << filenameRank << std::endl;
+//         } else {
+//             std::cerr << "No se pudo abrir el archivo rank " << filenameRank << " para escritura." << std::endl;
+//         }
+//     }
+    
+//     if(quantile.size()!=0){
+//         std::ofstream outfileQuantile(filenameQuantile); // errorRelativo obtenido de los experimentos
+//         if (outfileQuantile.is_open()) {
+//             for (const auto& inner_vector : quantile) {
+//                 for (const auto& element : inner_vector) {
+//                     outfileQuantile << element << " ";
+//                 }
+//                 outfileQuantile << std::endl;
+//             }
+//             outfileQuantile.close();
+//             std::cout << "Los datos Quantile se han almacenado correctamente en el archivo " << filenameQuantile << std::endl;
+//         } else {
+//             std::cerr << "No se pudo abrir el archivo Quantile " << filenameQuantile << " para escritura." << std::endl;
+//         }    
+//     }
+    
+
+//     // imprimir por pantalla los resultados de esta sesion de experimentos, tanto para rank como quantile
+//     if(rank.size()!=0){
+//         for(int i=0;i<consultaCuantiles.size();i++){ // rank
+//             cout << "resultados de consulta de RANK cuantil: " << consultaCuantiles.at(i) << endl;
+//             double rankAverage = 0;
+//             for(int j=0;j<numRepeticiones;j++){
+//                 rankAverage+= rank.at(j).at(i);
+//                 cout << rank.at(j).at(i) << " ";
+//             }
+//             if(numRepeticiones>1){
+//                 cout << ". ---- Average: " << rankAverage/numRepeticiones;
+//             }
+//             cout << endl;
+//         }
+//     }
+    
+//     if(quantile.size()!=0){
+//         for(int i=0;i<consultaCuantiles.size();i++){ // quantile
+//             cout << "resultados de consulta de QUANTILE cuantil: " << consultaCuantiles.at(i) << endl;
+//             double quantileAverage = 0;
+//             for(int j=0;j<numRepeticiones;j++){
+//                 quantileAverage+= quantile.at(j).at(i);
+//                 cout << quantile.at(j).at(i) << " ";
+//             }
+//             if(numRepeticiones>1){
+//                 cout << ". ---- Average: " << quantileAverage/numRepeticiones;
+//             }
+//             cout << endl;
+//         }
+//     }
+// }
 
 void almacenarDatosMuestreados(string filenameEspecifications,vector<double> ranksConsultados , vector<double> &parametrosKLL, vector<vector<double>> &rank){
     // se define ubicacion resultante de los archivos generados por las pruebas
@@ -827,7 +908,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                 rankkmin.push_back(rankErrorkmin);
                 quantilekmin.push_back(quantilesErrorkmin);
 
-                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin);
+                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin, 0);
 
                 parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications);
             } 
@@ -846,7 +927,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     cerr << "RANK!!!!:" << endl;
     cerr << "QUANTILE!!!!:" << endl;
 
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile);
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile, 0);
 
     //cout << "Cantidad de veces que el error supero la proporcion entregada por epsilon." << endl
     //     << "Rank: " << rankMayorEpsilon << endl
@@ -933,6 +1014,10 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
         return;
     }
 
+    clock_t inicio, fin;
+    double tiempo;
+    inicio = clock();
+
     std::default_random_engine generator;
     generator.seed(0);
 
@@ -946,19 +1031,20 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     vector<vector<double>> rank; 
     vector<vector<double>> quantile;
 
-    fstream in(archivoActualTxt);
-    int lines = 0;
-    char endline_char = '\n';
-    while (in.ignore(numeric_limits<streamsize>::max(), in.widen(endline_char)))
-    {
-        ++lines;
-    }
-    n = lines-1;
-    cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
+    //! deberia ser innecesario debido a que se le entrega n por parametro al metodo
+    // fstream in(archivoActualTxt);
+    // int lines = 0;
+    // char endline_char = '\n';
+    // while (in.ignore(numeric_limits<streamsize>::max(), in.widen(endline_char)))
+    // {
+    //     ++lines;
+    // }
+    // n = lines-1;
+    // cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
     
     // REVISAR MAIN
     //KLL kll1 = epsilonDetermined ? isMrl ? KLL(epsilon, n) : KLL(n, epsilon, c, minK) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
-    StreamSketch kll1 = epsilonDetermined ? isMrl ? StreamSketch(epsilon, n/4) : StreamSketch(n/4, epsilon, c, minK) : isMrl ? StreamSketch(mrlKmin) : StreamSketch(n/4,epsilon,delta,c,minK);
+    KLL kll1 = epsilonDetermined ? isMrl ? KLL(epsilon, n) : KLL(n, epsilon, c, minK) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
 
     std::ifstream archivo(archivoActualTxt);
     std::string linea;
@@ -1010,7 +1096,9 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     string carpetaBin = "kllbin/";
     parametrosKLL.push_back(kll1.saveData(carpetaBin+filenameEspecifications));
 
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile);
+    fin = clock();
+    tiempo = (double)(fin - inicio) / CLOCKS_PER_SEC;
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile, tiempo);
     
     //kll1.print();
 
@@ -1156,31 +1244,47 @@ void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza,
     epsilon = 0.05;
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
     // // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.01";
-    epsilon = 0.01;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.005";
-    epsilon = 0.005;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.001";
-    epsilon = 0.001;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    
     // determinedEpsilonPrefix = "epsilonDetermined0.025";
     // epsilon = 0.025;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    // determinedEpsilonPrefix = "epsilonDetermined0.01";
+    // epsilon = 0.01;
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
     // determinedEpsilonPrefix = "epsilonDetermined0.0075";
     // epsilon = 0.0075;
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.006";
+    epsilon = 0.006;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    // determinedEpsilonPrefix = "epsilonDetermined0.005";
+    // epsilon = 0.005;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.004";
+    epsilon = 0.004;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.003";
+    epsilon = 0.003;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
     // determinedEpsilonPrefix = "epsilonDetermined0.0025";
     // epsilon = 0.0025;
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
     // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    determinedEpsilonPrefix = "epsilonDetermined0.002";
+    epsilon = 0.002;
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    // determinedEpsilonPrefix = "epsilonDetermined0.001";
+    // epsilon = 0.001;
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
+    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
+    
 }
 
 int main(int argc, char*argv[]){

@@ -306,27 +306,37 @@ int main(int argc, char **argv) {
       }
     }
 
-    cout << "QUANTILE:" << endl;
-    for(int i=0;i<nfrac+1;i++){
-      if(!incluirTruthValues) 
-        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i]);
-      else
-        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\t truth %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i], truthQuantile.at(i));
+    auto rank  = sketch1.get_rank(3232235891);
+    auto rank2 = sketch1.get_rank(3232235890);
+    cout << setprecision(5) << rank*2668026 << endl;
+    cout << setprecision(5) << rank2*2668026 << endl;
+    cout << setprecision(5) << (rank-rank2)*2668026 << endl;
+
+  cout << "sketch data: " << sketch1.to_string(true,true) << endl;
+
+    //printf("rank: %lld ,normalizado: %lf ", ,rank);
+
+    // cout << "QUANTILE:" << endl;
+    // for(int i=0;i<nfrac+1;i++){
+    //   if(!incluirTruthValues) 
+    //     printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i]);
+    //   else
+    //     printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf\t datasketches %lf\t truth %lf\n",i,fractions[i], quantileElements[i], quantilekminElements[i], qt1[i], truthQuantile.at(i));
       
-    }
+    // }
 
-    cout << endl << "RANK:" << endl;
-    for(int i=0;i<nfrac+1;i++){
-      if(!incluirTruthValues) 
-        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]));
-      else 
-        printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\t truth %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]), (double)truthRank.at(i)/(double)n);
-    }
+    // cout << endl << "RANK:" << endl;
+    // for(int i=0;i<nfrac+1;i++){
+    //   if(!incluirTruthValues) 
+    //     printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]));
+    //   else 
+    //     printf("%d\t cuantil %lf\t kll %lf\t kllmerge %lf \t datasketches %lf\t truth %lf\n",i,fractions[i], (double)rankElements[i]/(double)n, (double)rankkminElements[i]/(double)n, sketch11.get_rank(qt1[i]), (double)truthRank.at(i)/(double)n);
+    // }
 
-    cout << "KLL UNO:" << endl;
-    kllUno.print();
-    cout << endl << endl << "KLL Merged:" << endl;
-    kllFinal.print();
+    // cout << "KLL UNO:" << endl;
+    // kllUno.print();
+    // cout << endl << endl << "KLL Merged:" << endl;
+    // kllFinal.print();
     // klleps.printNumSketches();
     // mrleps.printNumSketches();
 

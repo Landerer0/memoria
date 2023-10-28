@@ -27,7 +27,7 @@ class KLL{
         bool reservoirKLLSample(double element, uint64_t elementWeight);
 
         bool add(double element); // agregar element al sketch, retorna true cuando sketch se llenó tras la inserción
-        void add(double element, uint32_t elementWeight); // agregar element al sketch
+        bool add(double element, uint32_t elementWeight); // agregar element al sketch
         void addv(double element); // agregar element al sketch
         uint64_t rank(double element); // indica el rank del elemento proporcionado
         vector<uint64_t> rank(vector<double> elements); 
@@ -38,11 +38,14 @@ class KLL{
         double quantile(double q); // retorna elemento encontrado en el quantil q
         vector<double> quantile(vector<double> q); 
 
+        vector<double> topKElements(uint32_t kParam);
+        vector<pair<double,uint64_t>> topKElementsFrequency(uint32_t kParam);
+        vector<pair<double,uint64_t>> estimateElementsFrequency();
+
         // Operaciones para realizar merge
         long height();
         pair<vector<double>, long> sketchAtLevel(long nivel);
         void update(KLL kll2);
-        void setSeconds(vector<long> seconds);
         KLL kllMerge(KLL &kll2);
         uint64_t numElementosRango(double a, double b);
 
@@ -51,6 +54,8 @@ class KLL{
         uint32_t getH();
         uint32_t getH_pp();
         uint32_t getFirstLevelK();
+        vector<double> getMRLParameters();
+        vector<double> getKLLParameters();
         pair<uint64_t,uint64_t> getNumElementsSeen(); 
         pair<double, double> getMinMaxElement();
         pair<unsigned long, double> getCurrentSample();
@@ -65,6 +70,7 @@ class KLL{
 
         uint64_t saveData(string outputFileName); // retorna el numero de bytes ocupados en el archivo binario
         KLL readData(string inputFileName); // retorna estructura asociado al archivo proporcionado
+        string binarySaveName(string archivoTraza);
 
     private:
         bool isMrl;
@@ -111,4 +117,15 @@ class KLL{
         KLL(uint32_t minKRead, uint32_t numElementosRevisadosRead, vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoRead);        
         KLL(uint64_t nRead, double epsilonRead,double deltaRead,double cRead, uint32_t minKRead,uint64_t numTotalElementosRead,unsigned long sampleWeightRead,double sampleElementRead, uint64_t numElementosRevisadosRead,vector<vector<double>> niveles, double minElementRead, double maxElementRead, bool espacioLimitadoReadbool, bool espacioCteRead);
 
+        // para crear un KLL desde cero
+        void startSketch();
+        void startLimitedSketchMRL(uint64_t np, uint64_t espacioMaximo); 
+        void startLimitedSketchKLL(uint64_t np, uint64_t espacioMaximo);//! actualmente no se tiene en consideracion el espacio maximo
+        void setupKLL(uint64_t nP, double epsilonP, double deltaP, double cP, int minkP);
+        void setupMRL(int minkP);
+
+        // para modificar sketch
+        void addNewLevel();
+        vector<pair<double,uint64_t>> obtenerResumenElementos();
+        vector<pair<uint64_t,double>> obtenerResumenFrecuencias();
 };

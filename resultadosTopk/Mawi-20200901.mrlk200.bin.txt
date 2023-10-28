@@ -1,0 +1,4 @@
+Mawi-20200901.txt
+archivo: Mawi-20200901
+archivo Txt: data/Mawi-20200901.txt
+En en el archivo data/Mawi-20200901.txt hay 119923870 lineas
