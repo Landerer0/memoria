@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <string.h>
+#include <chrono>
 #include <fstream>
 
 #include "kll.hpp"
@@ -719,14 +720,16 @@ void KLL::constantSpaceCompaction(){
     return;
 }
 
-vector<double> seleccionElementosACompactar(vector<double> &elements){
+vector<double> KLL::seleccionElementosACompactar(vector<double> &elements){
     vector<double> toReturn;
     unsigned char elementosPares = 0;
         if(rand()%2==0) elementosPares = 0; // se mantienen los elementos pares
         else elementosPares = 1; // se mantienen los elementos impares
     
-    // sort de los elementos
-    sort(elements.begin(), elements.end());
+    auto start = std::chrono::high_resolution_clock::now();
+    sort(elements.begin(), elements.end()); // sort de los elementos
+    auto end = std::chrono::high_resolution_clock::now();
+    sortTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     // Agregar los elementos de mayor a menor (en iterativeCompaction)
     for(int i=elementosPares;i<elements.size();i+=2){
@@ -868,13 +871,19 @@ bool KLL::add(double element){
 }
 
 bool KLL::add(double element, uint32_t elementWeight){
+    auto start = std::chrono::high_resolution_clock::now();
+
     numTotalElementos+=elementWeight;
     if(element<minElement) minElement = element;
     else if (element>maxElement) maxElement = element;
     if(!reservoirKLLSample(element,elementWeight)) return false;
     insertElement(0,sampleElement);
     numElementosRevisados+=elementWeight; // para metodo quantile
-    return iterativeCompaction((long) 0, false);
+    bool toReturn = iterativeCompaction((long) 0, false);
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    buildTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    return toReturn;
 }
 
 // add utilizado cuando se hacer merge de KLL
@@ -901,12 +910,16 @@ vector<pair<double,uint64_t>> KLL::obtenerResumenElementos(){
     }
 
     // realizar el sort
+    auto start = std::chrono::high_resolution_clock::now();
     sort(vectorElementos.begin(),vectorElementos.end());
+    auto end = std::chrono::high_resolution_clock::now();
+    sortTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     return vectorElementos;
 }
 
 uint64_t KLL::rank(double element){
+    auto start = std::chrono::high_resolution_clock::now();
     uint64_t rank = 0;
 
     vector<double> actual;
@@ -914,7 +927,10 @@ uint64_t KLL::rank(double element){
     for(int nivel=0;nivel< numArreglos;nivel++){ // por cada arreglo
         actual = sketch.at(nivel).first;
 
+        auto start = std::chrono::high_resolution_clock::now();
         sort(actual.begin(),actual.end());
+        auto end = std::chrono::high_resolution_clock::now();
+        sortTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
         for(int i=0;i<actual.size();i++){ // por cada item dentro del arreglo
             if(actual.at(i) < 0) continue;
             if(element >= actual.at(i)){ // comparo el num elementos menores
@@ -923,10 +939,14 @@ uint64_t KLL::rank(double element){
         }    
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    searchTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
     return pow(2,H_pp)*rank;
 }
 
 vector<uint64_t> KLL::rank(vector<double> elements){
+    auto start = std::chrono::high_resolution_clock::now();
     // Procedimiento similar a select.
     // 1. Se agregan todos los elementos de manera (Elemento, frecuencia)
     // 2. Se realiza un sort en el vector donde se almacenan
@@ -957,10 +977,15 @@ vector<uint64_t> KLL::rank(vector<double> elements){
         ranks.push_back(pow(2,H_pp)*actualRank);
     }
 
+    auto end = std::chrono::high_resolution_clock::now();
+    searchTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
     return ranks;
 }
 
 double KLL::select(uint64_t rank){
+    auto start = std::chrono::high_resolution_clock::now();
+
     vector<pair<double,uint64_t>> elementos = obtenerResumenElementos(); // par(elemento,peso) 
     
     uint64_t rankActual = 0;
@@ -970,6 +995,9 @@ double KLL::select(uint64_t rank){
         rankActual+=elementos.at(i).second;
         if(rank<=rankActual) return elementos.at(i).first;
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    searchTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     return elementos.at(elementos.size()-1).first;
 }
@@ -1006,6 +1034,7 @@ pair<double, bool> KLL::selectMinMax(uint64_t rank){
 }
 
 vector<double> KLL::select(vector<uint64_t> ranks){
+    auto start = std::chrono::high_resolution_clock::now();
     vector<double> selected;
 
     vector<pair<double,uint64_t>> vectorElementos = obtenerResumenElementos(); // par(elemento,peso) 
@@ -1031,6 +1060,9 @@ vector<double> KLL::select(vector<uint64_t> ranks){
     while(ranks.size()!=selected.size()){
         ranks.push_back(pow(2,H_pp)*actualRank);
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    searchTime += std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
     return selected;
 }

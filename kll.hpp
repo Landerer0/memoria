@@ -72,7 +72,13 @@ class KLL{
         KLL readData(string inputFileName); // retorna estructura asociado al archivo proporcionado
         string binarySaveName(string archivoTraza);
 
+        vector<uint64_t> getTimes();
+
     private:
+        uint64_t sortTime = 0;
+        uint64_t searchTime = 0;
+        uint64_t buildTime = 0;
+
         bool isMrl;
         double minElement;
         double maxElement;
@@ -90,6 +96,7 @@ class KLL{
         void constantSpaceCompaction(); // exclusiva para el kll con espacio cte.
         
         // Operaciones
+        vector<double> seleccionElementosACompactar(vector<double> &elements);
         void addToSampler(double element,uint64_t weight);
         void insertElement(long nivel,double &element);
         void insertCompactionElement(long nivel,double &element,bool updating);
