@@ -1594,3 +1594,11 @@ vector<double> KLL::getKLLParameters(){
     toReturn.push_back(minK);
     return toReturn;
 }
+
+vector<uint64_t> KLL::getTimes(){
+    vector<uint64_t> times;
+    times.push_back(sortTime);
+    times.push_back(buildTime);
+    times.push_back(searchTime);
+    return times;
+}

@@ -227,7 +227,7 @@ void quantileTruthKLLPreprocesado(KLL &kll, double cuantil, double n, vector<dou
     error.push_back(errorValue);
 }
 
-void pruebaKLLPreprocesado(KLL kll, unsigned long n,vector<double> cuantilesAConsultar,vector<double> &rankError,vector<double> &quantilesError, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantiles){
+void pruebaKLLPreprocesado(KLL &kll, unsigned long n,vector<double> cuantilesAConsultar,vector<double> &rankError,vector<double> &quantilesError, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantiles){
     vector<double> kllquantile = kll.quantile(cuantilesAConsultar);
     vector<uint64_t> kllrank = kll.rank(elementosConsulta);
     /*
@@ -1031,19 +1031,7 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     vector<vector<double>> rank; 
     vector<vector<double>> quantile;
 
-    //! deberia ser innecesario debido a que se le entrega n por parametro al metodo
-    // fstream in(archivoActualTxt);
-    // int lines = 0;
-    // char endline_char = '\n';
-    // while (in.ignore(numeric_limits<streamsize>::max(), in.widen(endline_char)))
-    // {
-    //     ++lines;
-    // }
-    // n = lines-1;
-    // cout << "En en el archivo " << archivoActual << " hay " << n << " lineas" << endl;
     
-    // REVISAR MAIN
-    //KLL kll1 = epsilonDetermined ? isMrl ? KLL(epsilon, n) : KLL(n, epsilon, c, minK) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
     KLL kll1 = epsilonDetermined ? isMrl ? KLL(epsilon, n) : KLL(n, epsilon, c, minK) : isMrl ? KLL(mrlKmin) : KLL(n,epsilon,delta,c,minK);
 
     std::ifstream archivo(archivoActualTxt);
@@ -1066,16 +1054,15 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
     vector<double> rankError1;
 
     cerr << "Prueba KLL Preprocesado INICIO" << endl;
-
-    //pruebaKLLPreprocesado(kll1,n,consultaCuantiles,rankError1,quantilesError1,elementosConsulta, truthRank, truthQuantile);    
+ 
     pruebaKLLPreprocesado(kll1,n,consultaCuantiles,rankError1,quantilesError1,elementosConsulta, truthRank, truthQuantile);    
     
     cerr << "Prueba KLL Preprocesado FIN" << endl;
     
     parametrosKLL = kll1.parametros();
-    parametrosKLL.push_back(buscarElementoEnArchivo(0,archivoActualSortData));
-    parametrosKLL.push_back(buscarElementoEnArchivo(1,archivoActualSortData));
-    parametrosKLL.push_back(n-parametrosKLL.at(parametrosKLL.size()-1));
+    parametrosKLL.push_back(buscarElementoEnArchivo(0,archivoActualSortData)); // rango
+    parametrosKLL.push_back(buscarElementoEnArchivo(1,archivoActualSortData)); // numElementosRepetidos
+    parametrosKLL.push_back(n-parametrosKLL.at(parametrosKLL.size()-1)); // numElementosDistintos
     // posteriormente se incorpora el espacio ocupado de los datos en binario
 
     rank.push_back(rankError1);
@@ -1094,7 +1081,7 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
 
     string puntoBin = ".bin";
     string carpetaBin = "kllbin/";
-    parametrosKLL.push_back(kll1.saveData(carpetaBin+filenameEspecifications));
+    parametrosKLL.push_back(kll1.saveData(carpetaBin+filenameEspecifications)); // espacioBinario
     vector<uint64_t> tiempos = kll1.getTimes();
     for(int i=0;i<tiempos.size();i++){
         parametrosKLL.push_back(tiempos.at(i));
