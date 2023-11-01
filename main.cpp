@@ -388,9 +388,9 @@ void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKL
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "resultados/";
     string nombreIteracion = "";
-    if(iteracionActual>0) nombreIteracion = iteracionActual.to_string();
+    if(iteracionActual>0) nombreIteracion = to_string(iteracionActual);
     // Nombre del archivo de salida
-    std::string filename = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Resultados"+nombreIteracion".txt";
+    std::string filename = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Resultados"+nombreIteracion+".txt";
 
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
     std::ofstream outfile(filename);
@@ -910,7 +910,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                 rankkmin.push_back(rankErrorkmin);
                 quantilekmin.push_back(quantilesErrorkmin);
 
-                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin, 0);
+                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin, 0, numRepeticiones);
 
                 parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications);
             } 
@@ -929,7 +929,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     cerr << "RANK!!!!:" << endl;
     cerr << "QUANTILE!!!!:" << endl;
 
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile, 0, iteracionActual);
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile, 0, numRepeticiones);
 
     //cout << "Cantidad de veces que el error supero la proporcion entregada por epsilon." << endl
     //     << "Rank: " << rankMayorEpsilon << endl
@@ -1091,7 +1091,7 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
 
     fin = clock();
     tiempo = (double)(fin - inicio) / CLOCKS_PER_SEC;
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile, tiempo,);
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile, tiempo,iteracionActual);
     
     //kll1.print();
 
