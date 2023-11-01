@@ -1,5 +1,9 @@
+#ifndef KLLTuple_H  // Verifica si KLLTuple_H no está definido
+#define KLLTuple_H  // Define si no está definido
+
 #include <iostream>
 #include <vector>
+#include "minheap.hpp"
 
 using namespace std;
 
@@ -73,6 +77,9 @@ class KLLTuple{
         string binarySaveName(string archivoTraza);
 
     private:
+        MinHeap heap = MinHeap(0,7);
+        void iniciarHeap(int numNiveles);
+
         bool isMrl;
         pair<int64_t,int64_t> minElement;
         pair<int64_t,int64_t> maxElement;
@@ -90,6 +97,7 @@ class KLLTuple{
         void constantSpaceCompaction(); // exclusiva para el kll con espacio cte.
         
         // Operaciones
+        vector<pair<int64_t,int64_t>> seleccionElementosACompactar(vector<pair<int64_t,int64_t>> &elements);
         void addToSampler(pair<int64_t,int64_t> element,uint64_t weight);
         void insertElement(long nivel,pair<int64_t,int64_t> &element);
         void insertCompactionElement(long nivel,pair<int64_t,int64_t> &element,bool updating);
@@ -129,3 +137,5 @@ class KLLTuple{
         vector<pair<pair<int64_t,int64_t>,uint64_t>> obtenerResumenElementos();
         vector<pair<uint64_t,pair<int64_t,int64_t>>> obtenerResumenFrecuencias();
 };
+
+#endif

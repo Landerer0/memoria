@@ -13,7 +13,12 @@ void debugLetra(string string){
 
 using namespace std;
 
+void KLLTuple::iniciarHeap(int numNiveles){
+    // heap = MinHeap(0,numNiveles);
+}   
+
 void KLLTuple::setupKLL(uint64_t nP, double epsilonP, double deltaP, double cP, int minkP){
+    iniciarHeap(7);
     isMrl = false;
     n = nP;
     epsilon = epsilonP;
@@ -44,6 +49,7 @@ void KLLTuple::setupKLL(uint64_t nP, double epsilonP, double deltaP, double cP, 
 }
 
 void KLLTuple::setupMRL(int minkP){
+    iniciarHeap(7);
     isMrl = true;
     n = 0;
     minK = minkP;
@@ -722,7 +728,7 @@ void KLLTuple::constantSpaceCompaction(){
     return;
 }
 
-vector<pair<int64_t,int64_t>> seleccionElementosACompactar(vector<pair<int64_t,int64_t>> &elements){
+vector<pair<int64_t,int64_t>> KLLTuple::seleccionElementosACompactar(vector<pair<int64_t,int64_t>> &elements){
     vector<pair<int64_t,int64_t>> toReturn;
     unsigned char elementosPares = 0;
         if(rand()%2==0) elementosPares = 0; // se mantienen los elementos pares
@@ -732,8 +738,9 @@ vector<pair<int64_t,int64_t>> seleccionElementosACompactar(vector<pair<int64_t,i
     sort(elements.begin(), elements.end());
 
     // Agregar los elementos de mayor a menor (en iterativeCompaction)
-    for(int i=elementosPares;i<elements.size();i+=2){
-        toReturn.push_back(elements.at(i));
+    for(int i=0;i<elements.size();i++){
+        if (i%2==elementosPares) toReturn.push_back(elements.at(i));
+        else heap.insert(elements.at(i));
     }
 
     return toReturn;
@@ -1151,6 +1158,7 @@ void KLLTuple::print(){
         }
         cout << endl;
     }
+    heap.printMinHeap();
 }
 
 pair<vector<pair<int64_t,int64_t>>, long> KLLTuple::sketchAtLevel(long nivel){

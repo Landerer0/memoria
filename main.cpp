@@ -384,11 +384,13 @@ vector<double> pruebaKLLMuestraPreprocesado(KLL kll, unsigned long n,vector<doub
 }
 
 void almacenarDatos(string filenameEspecifications, vector<double> &parametrosKLL, vector<double> &consultaCuantiles,int numRepeticiones
-                    , vector<vector<double>> &rank, vector<vector<double>> &quantile, double tiempo){
+                    , vector<vector<double>> &rank, vector<vector<double>> &quantile, double tiempo, int iteracionActual){
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "resultados/";
+    string nombreIteracion = "";
+    if(iteracionActual>0) nombreIteracion = iteracionActual.to_string();
     // Nombre del archivo de salida
-    std::string filename = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Resultados.txt";
+    std::string filename = nombreCarpeta+determinedEpsilonPrefix+"datos"+filenameEspecifications+"Resultados"+nombreIteracion".txt";
 
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
     std::ofstream outfile(filename);
@@ -927,7 +929,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
     cerr << "RANK!!!!:" << endl;
     cerr << "QUANTILE!!!!:" << endl;
 
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile, 0);
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, numRepeticiones, rank, quantile, 0, iteracionActual);
 
     //cout << "Cantidad de veces que el error supero la proporcion entregada por epsilon." << endl
     //     << "Rank: " << rankMayorEpsilon << endl
@@ -1008,7 +1010,7 @@ void probarVariacionDistribucion(unsigned long n, double epsilon, double delta, 
     return;
 }
 
-void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl, bool epsilonDetermined){
+void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vector<double> distribucion, vector<double> consultaCuantiles, vector<double> elementosConsulta, vector<uint64_t> truthRank, vector<double> truthQuantile, bool isMrl, bool epsilonDetermined,int iteracionActual){
     if(distribucion.size()==0||consultaCuantiles.size()==0){
         cout << "no indica distribución o cuantiles a consultar." << endl;
         return;
@@ -1089,7 +1091,7 @@ void pruebaPreprocesado(uint64_t n, double epsilon, double delta, double c, vect
 
     fin = clock();
     tiempo = (double)(fin - inicio) / CLOCKS_PER_SEC;
-    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile, tiempo);
+    almacenarDatos(filenameEspecifications, parametrosKLL, consultaCuantiles, 1, rank, quantile, tiempo,);
     
     //kll1.print();
 
@@ -1174,7 +1176,7 @@ uint32_t numLineasArchivo(string archivo){
     return n;
 }
 
-void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza, vector<double> consultaCuantiles){
+void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza, vector<double> consultaCuantiles, int numRepeticiones){
     uint32_t n = numLineasArchivo(archivoActualTxt);
     
     cout << "N: " << n << endl;
@@ -1230,52 +1232,55 @@ void pruebaVariacionArchivoPreprocesado(vector<double> distribucionArchivoTraza,
     determinedEpsilonPrefix = "epsilonDetermined";
 
     c=1.0/2.0;
-    
-    // determinedEpsilonPrefix = "epsilonDetermined0.05";
-    // epsilon = 0.05;
-    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    // // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    // determinedEpsilonPrefix = "epsilonDetermined0.025";
-    // epsilon = 0.025;
-    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.01";
-    epsilon = 0.01;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.0075";
-    epsilon = 0.0075;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.006";
-    epsilon = 0.006;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.005";
-    epsilon = 0.005;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.004";
-    epsilon = 0.004;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.003";
-    epsilon = 0.003;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.0025";
-    epsilon = 0.0025;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    determinedEpsilonPrefix = "epsilonDetermined0.002";
-    epsilon = 0.002;
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    // determinedEpsilonPrefix = "epsilonDetermined0.001";
-    // epsilon = 0.001;
-    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined);
-    // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined);
-    
+    for(int it=1;it<=numRepeticiones;it++){
+        int iteracion;
+        if(numRepeticiones==1) iteracion = 0;
+        else iteracion = it;
+        // determinedEpsilonPrefix = "epsilonDetermined0.05";
+        // epsilon = 0.05;
+        // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        // // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        // determinedEpsilonPrefix = "epsilonDetermined0.025";
+        // epsilon = 0.025;
+        // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.01";
+        epsilon = 0.01;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.0075";
+        epsilon = 0.0075;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.006";
+        epsilon = 0.006;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.005";
+        epsilon = 0.005;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.004";
+        epsilon = 0.004;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.003";
+        epsilon = 0.003;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.0025";
+        epsilon = 0.0025;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        determinedEpsilonPrefix = "epsilonDetermined0.002";
+        epsilon = 0.002;
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+        // determinedEpsilonPrefix = "epsilonDetermined0.001";
+        // epsilon = 0.001;
+        // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isMrl, epsilonDetermined, iteracion);
+        // pruebaPreprocesado(n, epsilon, 0.0, c, distribucionArchivoTraza, consultaCuantiles, elementosConsulta, truthRank, truthQuantile, isNotMrl, epsilonDetermined, iteracion);
+    }
 }
 
 int main(int argc, char*argv[]){
@@ -1337,7 +1342,7 @@ int main(int argc, char*argv[]){
 
     vector<double> consultaDeciles = {10, 20, 30, 40, 50, 60, 70, 80, 90};
 
-    int numRepeticiones = 2;
+    int numRepeticiones = 100;
     
     // en caso de proporcionar ficheros, se iran procesando de uno en uno
     if(argc>2){
@@ -1378,7 +1383,7 @@ int main(int argc, char*argv[]){
             archivoActualTxt = archivoActualTxt.append(".txt");
 
             if(distribucionArchivoTraza.size()==2 && distribucionArchivoTraza.at(1)==0){
-                pruebaVariacionArchivoPreprocesado(distribucionArchivoTraza,consultaCuantiles);
+                pruebaVariacionArchivoPreprocesado(distribucionArchivoTraza,consultaCuantiles,numRepeticiones);
             }else{
                 probarVariacionDistribucion(n,0.05,0.01,c,distribucionArchivoTraza,consultaCuantiles,1);
             }

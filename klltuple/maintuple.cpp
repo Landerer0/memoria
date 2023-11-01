@@ -1,6 +1,8 @@
-// g++ maintuple.cpp klltuple.hpp klltuple.cpp -o maintuple
+// g++ maintuple.cpp klltuple.hpp klltuple.cpp minheap.cpp minheap.hpp -o maintuple
 // ./maintuple archivoTraza              // GENERAL
 // ./maintuple Mendeley.txt
+// ./maintuple numElementos
+// ./maintuple 10000000
 
 #include <iostream>
 #include <vector>

@@ -1,6 +1,7 @@
 // g++ generadorPares.cpp -o generadorPares
-// ./generadorPares numParesAGenerar
+// ./generadorPares numParesAGenerar minElemento maxElemento minFlujo maxFlujo
 // ./generadorPares 1000
+// ./generadorPares 3000000 50000 900000000 1000 10000
 
 #include <iostream>
 #include <fstream>
@@ -11,6 +12,10 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
     int n = stoi(argv[1]);
+    uint64_t minElement = stoull(argv[2]);
+    uint64_t maxElement = stoull(argv[3]);
+    uint64_t minFlujo = stoull(argv[4]);
+    uint64_t maxFlujo = stoull(argv[5]);
 
     string nombreFichero = "pares"+to_string(n)+".txt";
     std::ofstream outFile(nombreFichero);
@@ -22,8 +27,8 @@ int main(int argc, char* argv[]) {
 
     // Configurar un generador de números aleatorios
     std::default_random_engine generator(static_cast<unsigned>(time(nullptr)));
-    std::uniform_int_distribution<int> firstDistribution(1, 1000);
-    std::uniform_int_distribution<int> secondDistribution(0, 20);
+    std::uniform_int_distribution<int> firstDistribution(minElement, maxElement);
+    std::normal_distribution<> secondDistribution(maxFlujo+(minFlujo+maxFlujo)/2, (minFlujo+maxFlujo)/4);
 
     // Generar n pares aleatorios y escribirlos en el archivo
     for (int i = 0; i < n; ++i) {
