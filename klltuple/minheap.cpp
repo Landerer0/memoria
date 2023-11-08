@@ -86,6 +86,20 @@ void MinHeap::printMinHeap() {
     }
 }
 
+vector<pair<int64_t,int64_t>> MinHeap::getSortHeap() {
+    if (heap.empty()) {
+        cout << "El Min Heap está vacío." << endl;
+    }
+
+    vector<pair<int64_t,int64_t>> toReturn = heap;
+
+    std::sort(toReturn.begin(), toReturn.end(), [](const std::pair<int64_t, int64_t>& a, const std::pair<int64_t, int64_t>& b) {
+        return a.first > b.first;
+    });
+
+    return toReturn;
+}
+
 vector<pair<int64_t, int64_t>> MinHeap::getHeap()  {
     return heap;
 }

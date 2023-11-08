@@ -17,6 +17,10 @@ void KLLTuple::iniciarHeap(int numNiveles){
     // heap = MinHeap(0,numNiveles);
 }   
 
+void KLLTuple::resetHeap(int numNiveles){
+    heap = MinHeap(0,numNiveles);
+}   
+
 void KLLTuple::setupKLL(uint64_t nP, double epsilonP, double deltaP, double cP, int minkP){
     iniciarHeap(7);
     isMrl = false;
@@ -1159,6 +1163,11 @@ void KLLTuple::print(){
         cout << endl;
     }
     heap.printMinHeap();
+
+    vector<pair<int64_t,int64_t>> heapElem = heap.getSortHeap();
+    for(int i=0;i<heapElem.size();i++){
+        printf("(%ld,%ld)\n",heapElem.at(i).first,heapElem.at(i).second);
+    }
 }
 
 pair<vector<pair<int64_t,int64_t>>, long> KLLTuple::sketchAtLevel(long nivel){
@@ -1393,6 +1402,11 @@ KLLTuple KLLTuple::kllMerge(KLLTuple &kll2){
             return kllCopy1;
         }
     }
+}
+
+
+vector<pair<int64_t,int64_t>> KLLTuple::getSortHeap(){
+    return heap.getSortHeap();
 }
 
 pair<unsigned long, pair<int64_t,int64_t>> KLLTuple::getCurrentSample(){

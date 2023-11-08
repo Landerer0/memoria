@@ -54,6 +54,7 @@ class KLLTuple{
 
         // Operaciones auxiliares
         bool isAnMrl();
+        vector<pair<int64_t,int64_t>> getSortHeap();
         uint32_t getH();
         uint32_t getH_pp();
         uint32_t getFirstLevelK();
@@ -75,6 +76,8 @@ class KLLTuple{
         uint64_t saveData(string outputFileName); // retorna el numero de bytes ocupados en el archivo binario
         KLLTuple readData(string inputFileName); // retorna estructura asociado al archivo proporcionado
         string binarySaveName(string archivoTraza);
+
+        void resetHeap(int numNiveles);
 
     private:
         MinHeap heap = MinHeap(0,7);

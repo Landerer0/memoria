@@ -13,6 +13,7 @@ public:
     void insert(pair<int64_t, int64_t> element);
     void printMinHeap();
     vector<pair<int64_t, int64_t>> getHeap();
+    vector<pair<int64_t, int64_t>> getSortHeap();
 
 private:
     vector<pair<int64_t, int64_t>> heap;

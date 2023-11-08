@@ -71,30 +71,6 @@ int main(int argc, char*argv[]){
     double delta = 0.001;
     double c = 0.5;
     int mink= 7;
-    // string archivoActualTxt = "";
-    // string archivoActual = "";
-
-    // string carpetaPreprocesada = "data/";
-    // string carpetaPreprocesadaOrdenada = "orden/";
-    // cout << argv[1] << endl;
-
-    // // Definición de nombres de archivos a utilizar
-    // archivoActualTxt = argv[1];
-    // archivoActual = archivoActualTxt;
-    // size_t posicion = archivoActual.find(".txt");
-    // if (posicion != std::string::npos) {
-    //     archivoActual.erase(posicion, 4); // Eliminamos 4 caracteres: .txt
-    // }
-    // cout << archivoActualTxt << endl;
-
-    // archivoActualTxt = carpetaPreprocesada;
-    // archivoActualTxt = archivoActualTxt.append(archivoActual);
-    // archivoActualTxt = archivoActualTxt.append(".txt");
-
-    // cout << "archivo: " << archivoActual << endl;
-    // cout << "archivo Txt: " << archivoActualTxt << endl;
-
-    //uint64_t n = numLineasArchivo(archivoActualTxt);
 
     KLLTuple kll(n/4, epsilon, delta, c, mink);
     for(int i =0;i<n;i++){
@@ -102,41 +78,6 @@ int main(int argc, char*argv[]){
     }
 
     kll.print();
-    // CREACION KLLTupleS
-    //klls.push_back(KLLTuple(100));
-    //klls.push_back(KLLTuple(150));
-    //klls.push_back(KLLTuple(200));
-    //klls.push_back(KLLTuple(250));
-    //klls.push_back(KLLTuple(300));
-    //klls.push_back(KLLTuple(n,(double)0.05,(double)0.001000,(double)0.5,20));
-    //klls.push_back(KLLTuple(n,(double)0.01,(double)0.001000,(double)0.5,20));
-    //klls.push_back(KLLTuple(n,(double)0.005,(double)0.001000,(double)0.5,20));
-    //klls.push_back(KLLTuple(n,(double)0.0075,(double)0.001000,(double)0.5,20));
-    //klls.push_back(KLLTuple(n,(double)0.001,(double)0.001000,(double)0.5,20));
-    //klls.push_back(KLLTuple(n,(double)0.05,(double)0.001000,(double)0.666666,20));
-    //klls.push_back(KLLTuple(n,(double)0.01,(double)0.001000,(double)0.666666,20));
-    //klls.push_back(KLLTuple(n,(double)0.005,(double)0.001000,(double)0.666666,20));
-    //klls.push_back(KLLTuple(n,(double)0.0075,(double)0.001000,(double)0.666666,20));
-    //klls.push_back(KLLTuple(n,(double)0.001,(double)0.001000,(double)0.666666,20));
-    
-    // INGRESO DATOS KLLS
-    // std::ifstream archivo(archivoActualTxt);
-    // std::string linea;
-    // if(archivo.is_open()) {
-    //     while (std::getline(archivo, linea)) {
-    //         int64_t dato;
-    //         std::istringstream iss(linea);
-    //         if (iss >> dato) {
-    //             for(int i=0;i<klls.size();i++){
-    //                 klls.at(i).add(make_pair(dato,rand()%16)); 
-    //             }
-    //         }
-    //     }
-    //     archivo.close();
-    // } else {
-    //     std::cout << "No se pudo abrir el archivo: " << archivoActualTxt << std::endl;
-    //     return 0;
-    // }
 
     return 0;
 }
