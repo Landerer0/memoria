@@ -11,6 +11,10 @@ visualizacionDistribuciones/resMendeley.txt
 kllbin
 saveKll
 
+# Apache Datasketches
+lib
+include
+
 # Archivos de prueba
 Chicago-20080319.txt
 Chicago-20080515.txt

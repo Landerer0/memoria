@@ -910,7 +910,7 @@ void prueba(unsigned long n, double epsilon, double delta, double c, vector<doub
                 rankkmin.push_back(rankErrorkmin);
                 quantilekmin.push_back(quantilesErrorkmin);
 
-                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin, 0, numRepeticiones);
+                almacenarDatos(filenameEspecificationskmin, parametrosKLL, consultaCuantiles, 1, rankkmin, quantilekmin, 0, numRepeticiones<);
 
                 parametrosKLL.at(parametrosKLL.size()-1) = kll1.saveData(carpetaBin+filenameEspecifications);
             } 

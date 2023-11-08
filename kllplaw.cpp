@@ -1,4 +1,5 @@
 // g++ -o kllplaw kllplaw.cpp streamsketch.hpp streamsketch.cpp kll.hpp kll.cpp -std=c++11 -I/usr/local/include/DataSketches/
+// g++ -o kllplaw kllplaw.cpp streamsketch.hpp streamsketch.cpp kll.hpp kll.cpp -std=c++11 -I/media/sf_shared/memoria/include/DataSketches/
 //         k        numFractions  Archivo
 // ./kllplaw 200      10            Chicago-20080319.txt
 // ./kllplaw 200      10            Mendeley.txt
