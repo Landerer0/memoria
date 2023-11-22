@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <fstream>
+#include <map>
 
 #include "klltuple.hpp"
+#include "minheap.hpp"
 
 void debugLetra(string string){
     cout << string << endl;
@@ -14,7 +16,7 @@ void debugLetra(string string){
 using namespace std;
 
 void KLLTuple::iniciarHeap(int numNiveles){
-    // heap = MinHeap(0,numNiveles);
+    heap = MinHeap(0,numNiveles);
 }   
 
 void KLLTuple::resetHeap(int numNiveles){
@@ -765,6 +767,7 @@ bool KLLTuple::reduction(long nivel){
             vectorActual.at(i+1).first += vectorActual.at(i+1).first;
             vectorActual.at(i) = make_pair(-1,-1);
             nivelSketch.second--;
+            numElementosRevisados-= pow(2,nivel);
             reduction = true;
         }
     }
@@ -940,7 +943,6 @@ vector<pair<pair<int64_t,int64_t>,uint64_t>> KLLTuple::obtenerResumenElementos()
     // llenar el vector con los Elementos del sketch 
     for(int i=0;i<numArreglos;i++){
         uint64_t peso = pow(2,i);
-        //for(int j=0;j<sketch.at(i).second;j++){
         for(int j=0;j<sketch.at(i).first.size();j++){
 	        if(sketch.at(i).first.at(j).first < 0)continue;
             pair<pair<int64_t,int64_t>, uint64_t> toInsert;
@@ -1409,6 +1411,129 @@ vector<pair<int64_t,int64_t>> KLLTuple::getSortHeap(){
     return heap.getSortHeap();
 }
 
+vector<pair<int64_t,int64_t>> KLLTuple::getTopFlows(){
+    // obtiene los flujos encontrados en el heap, y estima los payloads segun valores encontrados 
+    // tanto en heap como en la estructura del kll, si se desea ahorrar tiempo se puede ignorar paso
+    // de busqueda de elementos en el sketch y simplemente proporcionar lo que el heap nos proporciona
+
+    vector<pair<int64_t,int64_t>> flows;
+    vector<pair<int64_t,int64_t>> heap = getSortHeap();
+    vector<pair<int64_t,int64_t>> heapFlows; // vector que tiene los flujos más relevantes del minHeap
+    vector<pair<int64_t,int64_t>> kllFlows;
+    
+    // Calculo de los flujos más relevantes e insercion en heapFlows
+    double factorReduccion = 5;
+    heapFlows.push_back(heap.at(0));
+    for(int i=0;i<heap.size()-1;i++){
+        if(heap.at(i).first/factorReduccion<=heap.at(i+1).first) heapFlows.push_back(heap.at(i+1));
+    }
+
+    // obtener los pares(payload, flujo) que pertenecen al 95%percentil de payloads en kll
+    double quantil = 0.95;
+    uint64_t rankKll = numElementosRevisados*quantil;
+    vector<pair<pair<int64_t,int64_t>,uint64_t>> vectorElementos = obtenerResumenElementos(); // par(elemento,peso) 
+    uint64_t actualRank = 0;
+    for(int i=0;i<vectorElementos.size();i++){
+        actualRank += vectorElementos.at(i).second; // actualizarRank
+        if(actualRank >= rankKll){ // se obtienen los elementos que se encuentran sobre el quantil indicado
+            kllFlows.push_back(vectorElementos.at(i).first);
+        }
+    }
+
+    flows = heapFlows;
+    // Iterar sobre los elementos de kllFlows
+    for (const auto& flow : kllFlows) {
+        // Buscar si ya existe un elemento con el mismo pair.second en flows
+        auto it = std::find_if(flows.begin(), flows.end(), [&flow](const auto& f) {
+            return f.second == flow.second;
+        });
+
+        // Si existe, sumar los primeros componentes
+        if (it != flows.end()) {
+            it->first += flow.first;
+        } else {
+            // Si no existe, agregar el elemento a flows
+            flows.push_back(flow);
+        }
+    }
+
+    return flows;
+}
+
+vector<pair<int64_t,int64_t>> KLLTuple::getTopFlows(vector<pair<int64_t,int64_t>> &heapFlows,vector<pair<int64_t,int64_t>> &kllFlows){
+    // obtiene los flujos encontrados en el heap, y estima los payloads segun valores encontrados 
+    // tanto en heap como en la estructura del kll, si se desea ahorrar tiempo se puede ignorar paso
+    // de busqueda de elementos en el sketch y simplemente proporcionar lo que el heap nos proporciona
+
+    vector<pair<int64_t,int64_t>> flows;
+    vector<pair<int64_t,int64_t>> heap = getSortHeap();
+    
+    // Calculo de los flujos más relevantes e insercion en heapFlows
+    double factorReduccion = 5;
+    heapFlows.push_back(heap.at(0));
+    for(int i=0;i<heap.size()-1;i++){
+        cout << "comp: " << heap.at(i).first/factorReduccion <<"|" << heap.at(i+1).first << endl;
+        if(heap.at(i).first/factorReduccion<=heap.at(i+1).first) heapFlows.push_back(heap.at(i+1));
+    }
+
+    // obtener los pares(payload, flujo) que pertenecen al 95%percentil de payloads en kll
+    map<int64_t,int64_t> mapaKll;
+    double quantil = 0.95;
+    cout << "numRevisados: " << numElementosRevisados << ", numTotal: " << numTotalElementos << endl;
+    uint64_t rankKll = numElementosRevisados*quantil;
+    vector<pair<pair<int64_t,int64_t>,uint64_t>> vectorElementos = obtenerResumenElementos(); // par(elemento,peso) 
+    uint64_t actualRank = 0;
+    for(int i=0;i<vectorElementos.size();i++){
+        actualRank += vectorElementos.at(i).second; // actualizarRank
+        cout << actualRank << "/" << rankKll <<endl;
+        if(actualRank >= rankKll){ // se obtienen los elementos que se encuentran sobre el quantil indicado
+            //kllFlows.push_back(vectorElementos.at(i).first);
+            mapaKll[vectorElementos.at(i).first.second] = mapaKll[vectorElementos.at(i).first.second] + vectorElementos.at(i).first.first;
+        }
+    }
+
+    for (const auto& par : mapaKll) {
+        kllFlows.push_back(std::make_pair(par.second, par.first));
+    }
+
+    flows = heapFlows;
+    // Iterar sobre los elementos de kllFlows
+    for (const auto& flow : kllFlows) {
+        // Buscar si ya existe un elemento con el mismo pair.second en flows
+        auto it = std::find_if(flows.begin(), flows.end(), [&flow](const auto& f) {
+            return f.second == flow.second;
+        });
+
+        // Si existe, sumar los primeros componentes
+        if (it != flows.end()) {
+            it->first += flow.first;
+        } else {
+            // Si no existe, agregar el elemento a flows
+            flows.push_back(flow);
+        }
+    }
+
+    return flows;
+}
+
+vector<pair<int64_t,int64_t>> KLLTuple::getTopHeapFlows(){
+    // obtiene los flujos encontrados en el heap, y obtiene los payloads asociado a los flujos encontrados
+    // en el heap
+    vector<pair<int64_t,int64_t>> flows = getSortHeap();
+
+    // for(int i=0;i<sketch.size();i++){ // busqueda en los niveles del sketch
+    //     for(int j=0;j<sketch.at(i).second;j++){ // en cada nivel se revisa todos los elementos ingresados
+    //         for(int k=0;k<flows.size();k++){ // search del elemento en el heap
+    //             if(sketch.at(i).first.at(j).second == flows.at(k).second) // si los flujos son iguales
+    //                 flows.at(k).first += sketch.at(i).first.at(j).first; // se suma el payload
+    //                 break; // se sigue al siguiente elemento del nivel
+    //         }
+    //     }
+    // }
+
+    return flows;
+}
+
 pair<unsigned long, pair<int64_t,int64_t>> KLLTuple::getCurrentSample(){
     pair<unsigned long, pair<int64_t,int64_t>> toReturn;
     toReturn.first = sampleWeight;
@@ -1464,17 +1589,20 @@ uint64_t KLLTuple::sizeInBytes(){
     // cout << " " << sizeof(pair<int64_t,int64_t>) << " ";
     uint64_t totalSize = 0;
     uint64_t sketchSize = 0;
+    uint64_t heapSize = 0;
 
     //calculo del tamaño de sketchSize
     for(int i = 0; i< sketch.size();i++){
         sketchSize+=sizeof(sketch.at(i).second); // entero que me indica numero de valores ocupados en el nivel i
         // cout << endl  <<(sketch.at(i).first.size()*sizeof(pair<int64_t,int64_t>)) << endl; 
-        sketchSize+= (sketch.at(i).first.size()*sizeof(pair<int64_t,int64_t>));
+        sketchSize += (sketch.at(i).first.size()*sizeof(pair<int64_t,int64_t>));
     }
+    heapSize = minHeap.sizeInBytes();
     // cout << sketchSize << endl;
 
     //calculo de totalSize según las variables utilizadas
     totalSize+=sketchSize;
+    totalSize+=heapSize;
     totalSize+=sizeof(hashLong);
     totalSize+=sizeof(sampleWeight);
     totalSize+=sizeof(sampleElement);
@@ -1603,10 +1731,11 @@ string KLLTuple::binarySaveName(string archivoTraza){
         }
         toReturn+=archivoTraza+".";
     }
+    int numNivelesHeap = heap.getLevels();
     if(isMrl){
-        toReturn+="mrlk" + to_string(minK);
+        toReturn+="mrltuplek" + to_string(minK)+"h"+to_string(numNivelesHeap);
     }else{
-        toReturn+="klle"+to_string(epsilon)+"d"+to_string(delta)+"c"+to_string(c)+"mk"+to_string(minK);
+        toReturn+="klltuplee"+to_string(epsilon)+"d"+to_string(delta)+"c"+to_string(c)+"mk"+to_string(minK)+"h"+to_string(numNivelesHeap);
     }
 
     return toReturn;

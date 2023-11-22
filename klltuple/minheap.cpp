@@ -2,7 +2,7 @@
 
 using namespace std;
 
-MinHeap::MinHeap(int n_elements, int n_levels) : levels(0) {
+MinHeap::MinHeap(int n_elements, int n_levels){
     if (n_elements > 0) {
         while ((1 << levels) < n_elements)
             levels++;
@@ -86,6 +86,12 @@ void MinHeap::printMinHeap() {
     }
 }
 
+uint64_t MinHeap::sizeInBytes(){
+    uint64_t size += heap.size() * sizeof(heap[0]);
+    size+= sizeof(levels);
+    return size;
+}
+
 vector<pair<int64_t,int64_t>> MinHeap::getSortHeap() {
     if (heap.empty()) {
         cout << "El Min Heap está vacío." << endl;
@@ -98,6 +104,11 @@ vector<pair<int64_t,int64_t>> MinHeap::getSortHeap() {
     });
 
     return toReturn;
+}
+
+
+int MinHeap::getLevels(){
+    return levels;
 }
 
 vector<pair<int64_t, int64_t>> MinHeap::getHeap()  {

@@ -40,6 +40,9 @@ class KLLTuple{
         vector<pair<pair<int64_t,int64_t>,bool>> selectMinMax(vector<uint64_t> rank); 
         pair<int64_t,int64_t> quantile(double q); // retorna elemento encontrado en el quantil q
         vector<pair<int64_t,int64_t>> quantile(vector<double> q); 
+        vector<pair<int64_t,int64_t>> getTopFlows();
+        vector<pair<int64_t,int64_t>> getTopFlows(vector<pair<int64_t,int64_t>> &heapFlows,vector<pair<int64_t,int64_t>> &kllFlows);
+        vector<pair<int64_t,int64_t>> getTopHeapFlows();
 
         vector<pair<int64_t,int64_t>> topKElements(uint32_t kParam);
         vector<pair<pair<int64_t,int64_t>,uint64_t>> topKElementsFrequency(uint32_t kParam);

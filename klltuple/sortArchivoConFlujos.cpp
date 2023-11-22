@@ -1,8 +1,13 @@
-// g++ sortArchivoConFlujos.cpp klltuple.hpp klltuple.cpp minheap.cpp minheap.hpp -o sortArchivoConFlujos
+// g++ sortArchivoConFlujos.cpp -o sortArchivoConFlujos
 // ./sortArchivoConFlujos archivoAOrdenar nombreArchivoOrdenado              // GENERAL
 // ./sortArchivoConFlujos pares3000000.txt
 // ./sortArchivoConFlujos paresBiasShuffle.txt sortparesBiasShuffle.txt
-
+// ./sortArchivoConFlujos paresBiasShuffle2.txt sortparesBias2Shuffle.txt
+// ./sortArchivoConFlujos paresBiasSimpleEscalonShuffle.txt sortparesBiasSimpleEscalon.txt
+// ./sortArchivoConFlujos flujosMendeley.txt sortflujosMendeley.txt
+// ./sortArchivoConFlujos flujosChicago-20160121.txt sortflujosChicago-20160121.txt
+// ./sortArchivoConFlujos flujosMawi-20181201.txt sortflujosMawi-20181201.txt
+// ./sortArchivoConFlujos flujosSanjose-20081016.txt sortflujosSanjose-20081016.txt
 
 #include <iostream>
 #include <vector>
@@ -19,7 +24,6 @@
 #include <map>
 
 
-#include "klltuple.hpp"
 
 using namespace std;
 

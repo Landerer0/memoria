@@ -1,7 +1,7 @@
 // g++ maintuplearchivo.cpp klltuple.hpp klltuple.cpp minheap.cpp minheap.hpp -o maintuplearchivo
 // ./maintuplearchivo archivoTraza  numNivelesHeap            // GENERAL
 // ./maintuplearchivo pares3000000.txt
-// ./maintuplearchivo paresBiasShuffle.txt 4
+// ./maintuplearchivo paresBiasSimpleEscalonShuffle.txt 7
 
 // ./maintuplearchivo Mendeley.txt
 // ./maintuplearchivo numElementos

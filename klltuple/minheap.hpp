@@ -10,9 +10,12 @@ using namespace std;
 class MinHeap {
 public:
     MinHeap(int n_elements, int n_levels);
+    MinHeap();
     void insert(pair<int64_t, int64_t> element);
+    uint64_t sizeInBytes();
     void printMinHeap();
     vector<pair<int64_t, int64_t>> getHeap();
+    int getLevels();
     vector<pair<int64_t, int64_t>> getSortHeap();
 
 private:

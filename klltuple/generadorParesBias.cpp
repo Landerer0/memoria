@@ -1,7 +1,10 @@
 // g++ generadorParesBias.cpp -o generadorParesBias
 // ./generadorParesBias  nombreFicheroSalida
-// ./generadorParesBias paresBiasShuffle.txt
-// ./generadorParesBias paresBiasShuffle2.txt
+// ./generadorParesBias paresBias.txt
+// ./generadorParesBias paresBias2.txt
+// ./generadorParesBias paresBiasSimpleEscalon.txt
+// ./generadorParesBias paresBiasSimpleEscalon2.txt
+
 
 #include <iostream>
 #include <fstream>
@@ -24,6 +27,32 @@ int main(int argc, char* argv[]) {
     if (!outFile.is_open()) {
         std::cerr << "No se pudo abrir el archivo." << std::endl;
         return 1;
+    }
+
+    //! paresBiasSimpleEscalon.txt
+    // // Generar n pares aleatorios y escribirlos en el archivo
+    // for (int i = 0; i < numPacketsMayorFlujo; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 1+rand()%5;
+    //     outFile << first << " " << second << std::endl;
+    // }
+    // for (int i = 0; i < numPacketsFlujosMayores; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 6+rand()%29995;
+    //     outFile << first << " " << second << std::endl;
+    // }
+
+    //! paresBiasSimpleEscalon2.txt
+    // // Generar n pares aleatorios y escribirlos en el archivo
+    for (int i = 0; i < numPacketsMayorFlujo; ++i) {
+        int64_t first = rand()%500;
+        int64_t second = 1+rand()%150;
+        outFile << first << " " << second << std::endl;
+    }
+    for (int i = 0; i < numPacketsFlujosMayores; ++i) {
+        int64_t first = rand()%500;
+        int64_t second = 151+rand()%29850;
+        outFile << first << " " << second << std::endl;
     }
 
     //! paresBiasShuffle.txt
@@ -56,30 +85,30 @@ int main(int argc, char* argv[]) {
 
     //! paresBiasShuffle2.txt
     // Generar n pares aleatorios y escribirlos en el archivo
-    for (int i = 0; i < numPacketsMayorFlujo; ++i) {
-        int64_t first = rand()%500;
-        int64_t second = 1;
-        outFile << first << " " << second << std::endl;
-    }
+    // for (int i = 0; i < numPacketsMayorFlujo; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 1;
+    //     outFile << first << " " << second << std::endl;
+    // }
 
-    for (int i = 0; i < numPacketsFlujosMayores; ++i) {
-        int64_t first = rand()%500;
-        int64_t second = 2+rand()%150;
-        outFile << first << " " << second << std::endl;
-    }
+    // for (int i = 0; i < numPacketsFlujosMayores; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 2+rand()%150;
+    //     outFile << first << " " << second << std::endl;
+    // }
 
-    for (int i = 0; i < numPacketsFlujosMenores; ++i) {
-        int64_t first = rand()%500;
-        int64_t second = 152+rand()%846;
-        outFile << first << " " << second << std::endl;
-    }
+    // for (int i = 0; i < numPacketsFlujosMenores; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 152+rand()%846;
+    //     outFile << first << " " << second << std::endl;
+    // }
 
 
-    for (int i = 0; i < numPacketsMenorFlujo; ++i) {
-        int64_t first = rand()%500;
-        int64_t second = 1000+rand()%29000;
-        outFile << first << " " << second << std::endl;
-    }
+    // for (int i = 0; i < numPacketsMenorFlujo; ++i) {
+    //     int64_t first = rand()%500;
+    //     int64_t second = 1000+rand()%29000;
+    //     outFile << first << " " << second << std::endl;
+    // }
 
 
     outFile.close();
