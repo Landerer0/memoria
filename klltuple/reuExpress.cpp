@@ -1,7 +1,8 @@
 // g++ reuExpress.cpp minheap.cpp klltuple.cpp -o reuExpress
-// ./reuExpress archivoTraza              // GENERAL
-// ./reuExpress paresBiasSimpleEscalon.txt
-// ./reuExpress flujosMendeley.txt
+// ./reuExpress archivoTraza  esTraza         // GENERAL
+// ./reuExpress paresBiasSimpleEscalon.txt 1
+// ./reuExpress flujosMendeley.txt 0
+// ./reuExpress flujosChicago.txt 0
 
 #include <iostream>
 #include <vector>
@@ -108,14 +109,19 @@ int main(int argc, char*argv[]){
 
     // klls.push_back(KLLTuple(n,(double)0.05,(double)0.001000,(double)0.666666,20));
     // klls.push_back(KLLTuple(n,(double)0.01,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n,(double)0.005,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/4,(double)0.005,(double)0.001000,(double)0.666666,20));
     // klls.push_back(KLLTuple(n,(double)0.0075,(double)0.001000,(double)0.666666,20));
     // klls.push_back(KLLTuple(n,(double)0.001,(double)0.001000,(double)0.666666,20));
     
+    for(int i=0;i<klls.size();i++){
+        if(klls.at(i).getH_pp()<3) klls.at(i).setH_pp(3); 
+    }
+
     // INGRESO DATOS KLLS --------------------------------------------------------------------------------------------------------------------------------------
     //! CAMBIAR "archivoLecturaKLL" dependiendo de si se trabaja con datos reales o generados
-    //string archivoLecturaKLL = archivoActual+"Shuffle.txt";
-    string archivoLecturaKLL = archivoActual+".txt";
+    string archivoLecturaKLL;
+    if(stoi(argv[2])!=0)archivoLecturaKLL = archivoActual+"Shuffle.txt";
+    else archivoLecturaKLL = archivoActual+".txt";
 
     std::ifstream archivo(archivoLecturaKLL);
     std::string linea;

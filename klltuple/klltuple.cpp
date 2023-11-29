@@ -23,6 +23,29 @@ void KLLTuple::resetHeap(int numNiveles){
     heap = MinHeap(0,numNiveles);
 }   
 
+void KLLTuple::setH_pp(int newLevel){
+    int nivelesARetirar = newLevel-H_pp;
+    if(nivelesARetirar < 0){        // old H'' > new H'': no se realizara ningun proceso, pues si se necesitan mas niveles estos seran agregados
+        nivelesARetirar = 0;
+    }
+    //else if(nivelesARetirar > 0) // old H'' < new H'': eliminar niveles pq menos elementos van a ser procesados (ocupara menos espacio)
+    for(int i=0;i<nivelesARetirar;i++){
+        if(sketch.size()<=1){
+            newLevel--;    
+        } 
+        else {
+            sketch.pop_back();
+            numArreglos--;
+        }
+    }
+
+    H_pp =  newLevel;
+    wH_pp = pow(2,H_pp);
+    mascara = pow(2,H_pp);
+    numArreglos = sketch.size();
+    H = H_pp+numArreglos-1;
+}
+
 void KLLTuple::setupKLL(uint64_t nP, double epsilonP, double deltaP, double cP, int minkP){
     iniciarHeap(7);
     isMrl = false;
@@ -695,6 +718,7 @@ void KLLTuple::addNewLevel(){
     sketch.push_back(toInsert);
     numArreglos++;
     H++;
+    //cerr << "H-1:"<< H-1 << ", H:" << H << ", H'': " << H_pp << ", numArreglos: " << numArreglos << endl;
 }
 
 void KLLTuple::constantSpaceCompaction(){
@@ -764,7 +788,7 @@ bool KLLTuple::reduction(long nivel){
 
     for(int i=0;i<vectorActual.size()-1;i++){
         if(vectorActual.at(i).second == vectorActual.at(i+1).second){
-            vectorActual.at(i+1).first += vectorActual.at(i+1).first;
+            vectorActual.at(i+1).first += vectorActual.at(i).first;
             vectorActual.at(i) = make_pair(-1,-1);
             nivelSketch.second--;
             numElementosRevisados-= pow(2,nivel);
@@ -803,7 +827,6 @@ bool KLLTuple::iterativeCompaction(long nivelInicial, bool updating){ //! queda 
     bool seDebeCompactar = false;
     int constantSpaceCompacted = 0; // indica si se ha compactado mediante constantSpaceCompaction. 0 indica que no, 1 indica que si 
 
-    
     if(numElementosOcupados>=numElementosTotales && !reduction(nivelInicial)){
         if(updating) print();
         // Si se lleno y se tiene espacio limitado
@@ -839,7 +862,10 @@ bool KLLTuple::iterativeCompaction(long nivelInicial, bool updating){ //! queda 
 
         // 2-Ingreso en compactor de nivel superior el elemento 
         long nivelAIngresar = nivelInicial + indiceVector + 1;
-        long posAInsertar = sketch.at(nivelAIngresar).second;
+
+        //cerr << nivelAIngresar << ", H: " << H << ", H'': " << H_pp  << ", numArreglos: " << numArreglos << "sketchSize: " << sketch.size() << endl;
+        long posAInsertar = sketch.at(nivelAIngresar).second; //! AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        //cerr << "a" << endl;
         
         uint64_t numElementosDisponiblesNivelSuperior = sketch.at(nivelAIngresar).first.size()-sketch.at(nivelAIngresar).second;
         uint64_t numElementosAIngresarNivelSuperior = min(numElementosDisponiblesNivelSuperior,elementosACompactar.at(indiceVector).size());
@@ -1440,6 +1466,13 @@ vector<pair<int64_t,int64_t>> KLLTuple::getTopFlows(){
         }
     }
 
+    for (pair<int64_t,int64_t> &flow : kllFlows) {
+        flow.first = flow.first*pow(2,H_pp);
+    }
+    for (pair<int64_t,int64_t> &flow : heapFlows) {
+        flow.first = flow.first*pow(2,H_pp);
+    }
+
     flows = heapFlows;
     // Iterar sobre los elementos de kllFlows
     for (const auto& flow : kllFlows) {
@@ -1494,6 +1527,14 @@ vector<pair<int64_t,int64_t>> KLLTuple::getTopFlows(vector<pair<int64_t,int64_t>
 
     for (const auto& par : mapaKll) {
         kllFlows.push_back(std::make_pair(par.second, par.first));
+    }
+
+
+    for (pair<int64_t,int64_t> &flow : kllFlows) {
+        flow.first = flow.first*pow(2,H_pp);
+    }
+    for (pair<int64_t,int64_t> &flow : heapFlows) {
+        flow.first = flow.first*pow(2,H_pp);
     }
 
     flows = heapFlows;
@@ -1597,7 +1638,7 @@ uint64_t KLLTuple::sizeInBytes(){
         // cout << endl  <<(sketch.at(i).first.size()*sizeof(pair<int64_t,int64_t>)) << endl; 
         sketchSize += (sketch.at(i).first.size()*sizeof(pair<int64_t,int64_t>));
     }
-    heapSize = minHeap.sizeInBytes();
+    heapSize = heap.sizeInBytes();
     // cout << sketchSize << endl;
 
     //calculo de totalSize según las variables utilizadas

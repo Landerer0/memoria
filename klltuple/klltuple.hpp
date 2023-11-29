@@ -81,6 +81,7 @@ class KLLTuple{
         string binarySaveName(string archivoTraza);
 
         void resetHeap(int numNiveles);
+        void setH_pp(int newLevel);
 
     private:
         MinHeap heap = MinHeap(0,7);

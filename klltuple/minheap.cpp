@@ -87,7 +87,7 @@ void MinHeap::printMinHeap() {
 }
 
 uint64_t MinHeap::sizeInBytes(){
-    uint64_t size += heap.size() * sizeof(heap[0]);
+    uint64_t size = heap.size() * sizeof(heap[0]);
     size+= sizeof(levels);
     return size;
 }

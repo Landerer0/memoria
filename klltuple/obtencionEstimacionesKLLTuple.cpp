@@ -1,10 +1,13 @@
 // g++ obtencionEstimacionesKLLTuple.cpp minheap.cpp klltuple.cpp -o obtencionEstimacionesKLLTuple
-// ./obtencionEstimacionesKLLTuple archivoTraza              // GENERAL
-// ./obtencionEstimacionesKLLTuple paresBiasSimpleEscalon.txt
-// nohup ./obtencionEstimacionesKLLTuple flujosMendeley.txt &
-// nohup ./obtencionEstimacionesKLLTuple flujosChicago-20160121.txt &
-// nohup ./obtencionEstimacionesKLLTuple flujosSanjose-20081016.txt &
-// nohup ./obtencionEstimacionesKLLTuple flujosMawi-20181201.txt &
+// ./obtencionEstimacionesKLLTuple archivoTraza boolArchivoReal             // GENERAL
+// ./obtencionEstimacionesKLLTuple paresBiasSimpleEscalon.txt 1
+// nohup ./obtencionEstimacionesKLLTuple flujosMendeley.txt 0 &
+// nohup ./obtencionEstimacionesKLLTuple flujosChicago-20160121.txt 0 &
+// nohup ./obtencionEstimacionesKLLTuple flujosSanjose-20081016.txt 0 &
+// nohup ./obtencionEstimacionesKLLTuple flujosMawi-20181201.txt 0 &
+// nohup ./obtencionEstimacionesKLLTuple flujosChicago2015.txt 0 &
+// nohup ./obtencionEstimacionesKLLTuple flujosChicago2016.txt 0 &
+// gdb -ex=r --args obtencionEstimacionesKLLTuple flujosChicago2016.txt 0
 
 #include <iostream>
 #include <vector>
@@ -95,30 +98,36 @@ int main(int argc, char*argv[]){
     cout << "archivo Txt: " << archivoActualTxt << endl;
 
     uint64_t n = numLineasArchivo(archivoActualTxt);
-
     // CREACION KLLS
     klls.push_back(KLLTuple(100));
     klls.push_back(KLLTuple(150));
     klls.push_back(KLLTuple(200));
     klls.push_back(KLLTuple(250));
     klls.push_back(KLLTuple(300));
+    int numMrl = klls.size();
     
-    klls.push_back(KLLTuple(n,(double)0.05,(double)0.001000,(double)0.5,20));
-    klls.push_back(KLLTuple(n,(double)0.01,(double)0.001000,(double)0.5,20));
-    klls.push_back(KLLTuple(n,(double)0.005,(double)0.001000,(double)0.5,20));
-    klls.push_back(KLLTuple(n,(double)0.0075,(double)0.001000,(double)0.5,20));
-    klls.push_back(KLLTuple(n,(double)0.001,(double)0.001000,(double)0.5,20));
+    klls.push_back(KLLTuple(n/8,(double)0.05,(double)0.001000,(double)0.5,20));
+    klls.push_back(KLLTuple(n/8,(double)0.01,(double)0.001000,(double)0.5,20));
+    klls.push_back(KLLTuple(n/8,(double)0.005,(double)0.001000,(double)0.5,20));
+    klls.push_back(KLLTuple(n/8,(double)0.0075,(double)0.001000,(double)0.5,20));
+    klls.push_back(KLLTuple(n/8,(double)0.001,(double)0.001000,(double)0.5,20));
 
-    klls.push_back(KLLTuple(n,(double)0.05,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n,(double)0.01,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n,(double)0.005,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n,(double)0.0075,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n,(double)0.001,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/8,(double)0.05,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/8,(double)0.01,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/8,(double)0.005,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/8,(double)0.0075,(double)0.001000,(double)0.666666,20));
+    klls.push_back(KLLTuple(n/8,(double)0.001,(double)0.001000,(double)0.666666,20));
     
-    // INGRESO DATOS KLLS
+    // INGRESO DATOS KLLS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! CAMBIAR "archivoLecturaKLL" dependiendo de si se trabaja con datos reales o generados
-    //string archivoLecturaKLL = archivoActual+"Shuffle.txt";
-    string archivoLecturaKLL = archivoActual+".txt";
+    string archivoLecturaKLL;
+    if(stoi(argv[2])!=0) archivoLecturaKLL = archivoActual+"Shuffle.txt";
+    else archivoLecturaKLL = archivoActual+".txt";
+
+    // int setHpp = 0;
+    // for(int i=numMrl;i<klls.size();i++){
+    //     if(klls.at(i).getH_pp()<setHpp) klls.at(i).setH_pp(setHpp); 
+    // }
 
     std::ifstream archivo(archivoLecturaKLL);
     std::string linea;

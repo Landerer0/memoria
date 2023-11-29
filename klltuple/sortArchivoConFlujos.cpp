@@ -23,8 +23,6 @@
 #include <cmath>
 #include <map>
 
-
-
 using namespace std;
 
 // Función para almacenar un par (suma, segundo) en un vector
