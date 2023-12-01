@@ -256,6 +256,32 @@ KLLTuple::KLLTuple(uint64_t numElementsParam, double epsilonParam, double deltaP
     startSketch();
 }
 
+KLLTuple::KLLTuple(vector<int64_t> sizeOfCompactors, int H_ppParam){
+    cout << "KLLTuple Determinado" << endl;
+    isMrl = false;
+    espacioCte = false;
+    espacioLimitado = false;
+    H_pp = H_ppParam;
+
+    vector<int64_t> sizeTemp = sizeOfCompactors;
+    for(int i=0;i<sizeTemp.size();i++){
+        uint64_t cantElementos = sizeTemp.at(i);
+        pair<int64_t,int64_t> valorElemento = make_pair(-2,-2);
+        vector<pair<int64_t,int64_t>> vectorAtLvlI(cantElementos,valorElemento); 
+        pair<vector<pair<int64_t,int64_t>>,long> toInsert;
+        toInsert.first=vectorAtLvlI;
+        toInsert.second=0; // representa el num de elementos ocupados en el arreglo
+        sketch.push_back(toInsert);
+    }
+    k = sizeTemp.at(sizeTemp.size()-1);
+    wH_pp = pow(2,H_pp);
+    mascara = pow(2,H_pp);
+    numArreglos = sketch.size();
+    H = H_pp+numArreglos-1;
+    
+}
+
+
 KLLTuple::KLLTuple(uint64_t numElementsParam, double epsilonParam, double cParam, int minKp){ 
     // KLLTuple Tradicional con espacio determinado por epsilon, delta=0.01
     cout << "KLLTuple proporcionando epsilon y con delta 0.01" << endl;
@@ -1801,5 +1827,21 @@ vector<double> KLLTuple::getKLLParameters(){
     toReturn.push_back(delta);
     toReturn.push_back(c);
     toReturn.push_back(minK);
+    return toReturn;
+}
+
+vector<double> KLLTuple::getAllParameters(){
+    vector<double> toReturn;
+    toReturn.push_back(H);
+    toReturn.push_back(H_pp);
+    toReturn.push_back(epsilon);
+    toReturn.push_back(delta);
+    toReturn.push_back(c);
+    toReturn.push_back(minK);
+    toReturn.push_back(numArreglos);
+    for(int i=0;i<sketch.size();i++){
+        //cout << i << " " << numArreglos << endl;
+        toReturn.push_back(sketch.at(i).first.size());
+    }
     return toReturn;
 }

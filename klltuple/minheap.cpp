@@ -63,6 +63,7 @@ void MinHeap::printMinHeap() {
         cout << "El Min Heap está vacío." << endl;
         return;
     }
+    cout << "minHeap tiene a lo más " << heap.size() << " elementos" << endl;
 
     int current_level = 0;
     int level_size = 1;

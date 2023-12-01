@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cmath>
 #include <map>
+#include <cstdlib>
 
 #include <fstream>
 #include <sstream>
@@ -45,7 +46,8 @@ void almacenarDatos(string nombreBinario, vector<pair<int64_t,int64_t>> estimaci
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "estimacionFrecuencias/";
 
-    string archivoGuardado = nombreCarpeta+nombreBinario+"Espacio"+to_string(kll.sizeInBytes())+".txt";
+    string archivoGuardado = nombreCarpeta+"Espacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
+    string archivoGuardadoParametros = nombreCarpeta+"parametrosEspacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
     // Nombre del archivo de salida
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
     std::ofstream outfileParametros(archivoGuardado);
@@ -54,7 +56,7 @@ void almacenarDatos(string nombreBinario, vector<pair<int64_t,int64_t>> estimaci
         for (const auto& element : estimacionTopk) {
             outfileParametros << element.first << " " << element.second << endl;
         }
-        outfileParametros << kll.sizeInBytes();
+        //outfileParametros << kll.sizeInBytes();
         outfileParametros << std::endl;
         // Cerrar el archivo
         outfileParametros.close();
@@ -63,6 +65,28 @@ void almacenarDatos(string nombreBinario, vector<pair<int64_t,int64_t>> estimaci
         std::cerr << "No se pudo abrir el archivo Parametros " << archivoGuardado << " para escritura." << std::endl;
     }
     
+
+    cout << "a" << endl;
+    std::ofstream outfileParametrosParam(archivoGuardadoParametros);
+
+    if (outfileParametrosParam.is_open()) {
+    cout << "b" << endl;
+        vector<double> params = kll.getAllParameters();
+    cout << params.size() << endl;
+        outfileParametrosParam << "H: " << params.at(0) << endl;
+        outfileParametrosParam << "H_pp: " << params.at(1) << endl;
+        outfileParametrosParam << "epsilon: " << params.at(2) << endl;
+        outfileParametrosParam << "delta: " << params.at(3) << endl;
+        outfileParametrosParam << "c: " << params.at(4) << endl;
+        outfileParametrosParam << "minK: " << params.at(5) << endl;
+        outfileParametrosParam << "numArreglos: " << params.at(6) << endl;
+        for(int i=7;i<params.size();i++){
+            outfileParametrosParam << "k" << to_string(i-7) <<": " << params.at(i) << endl;
+        }
+            
+        outfileParametrosParam.close();
+    }
+
     return;
 }
 
@@ -92,6 +116,7 @@ int main(int argc, char*argv[]){
     cout << "archivo: " << archivoActual << endl;
     cout << "archivo Txt: " << archivoActualTxt << endl;
 
+    std::srand(42);
     uint64_t n = numLineasArchivo(archivoActualTxt);
 
     // CREACION KLLS
@@ -108,11 +133,17 @@ int main(int argc, char*argv[]){
     // klls.push_back(KLLTuple(n/8,(double)0.0075,(double)0.001000,(double)0.5,20));
     // klls.push_back(KLLTuple(n/8,(double)0.001,(double)0.001000,(double)0.5,20));
 
-    klls.push_back(KLLTuple(n/8,(double)0.05,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n/8,(double)0.01,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n/8,(double)0.005,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n/8,(double)0.0075,(double)0.001000,(double)0.666666,20));
-    klls.push_back(KLLTuple(n/8,(double)0.001,(double)0.001000,(double)0.666666,20));
+    // klls.push_back(KLLTuple(n/8,(double)0.05,(double)0.001000,(double)0.666666,20));
+    // klls.push_back(KLLTuple(n/8,(double)0.01,(double)0.001000,(double)0.666666,20));
+    // klls.push_back(KLLTuple(n/8,(double)0.005,(double)0.001000,(double)0.666666,20));
+    // klls.push_back(KLLTuple(n/8,(double)0.0075,(double)0.001000,(double)0.666666,20));
+    // klls.push_back(KLLTuple(n/8,(double)0.001,(double)0.001000,(double)0.666666,20));
+
+    int H_pp1 = 2;
+    vector<int64_t> sizekll1 = {100, 100, 100};
+    vector<int64_t> sizekll2 = {500, 500, 500};
+    klls.push_back(KLLTuple(sizekll1,H_pp1+2));
+    klls.push_back(KLLTuple(sizekll2,H_pp1+2));
     
     // INGRESO DATOS KLLS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! CAMBIAR "archivoLecturaKLL" dependiendo de si se trabaja con datos reales o generados
@@ -153,22 +184,22 @@ int main(int argc, char*argv[]){
         //klls.at(i).print();
         cout << "H'': " << klls.at(i).getH_pp() << endl;
         cout << "ESTIMACIONES HEAP" << endl;
-        cout << "Flujo\tPayload_Estimado\n";
+        cout << "Payload_Estimado\tFlujo\n";
         for(int j=0;j<estimacionHeap.size();j++){
             cout  << estimacionHeap.at(j).first<< "\t" << estimacionHeap.at(j).second  << endl;
         }
         cout << "ESTIMACIONES KLL" << endl;
-        cout << "Flujo\tPayload_Estimado\n";
+        cout << "Payload_Estimado\tFlujo\n";
         for(int j=0;j<estimacionKll.size();j++){
             cout  << estimacionKll.at(j).first << "\t"<< estimacionKll.at(j).second  << endl;
         }
         cout << "ESTIMACIONES GENERALES" << endl;
-        cout << "Flujo\tPayload_Estimado\n";
+        cout << "Payload_Estimado\tFlujo\n";
         cout << estimaciones.size() << endl;
         for(int j=0;j<estimaciones.size();j++){
             cout  << estimaciones.at(j).first<< "\t" << estimaciones.at(j).second<< endl;
         }
-        
+        klls.at(i).print();
         almacenarDatos(klls.at(i).binarySaveName(archivoActual),estimaciones,klls.at(i));
     }
 

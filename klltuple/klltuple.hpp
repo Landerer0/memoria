@@ -13,6 +13,9 @@ class KLLTuple{
         KLLTuple(uint64_t numElementsParam, double epsilonParam, double deltaParam, double cParam, int minKp); // KLLTuple Tradicional
         //KLLTuple(uint64_t espacioMaximo, uint64_t numElementsParam, double cParam, int minKp, uint32_t maxKp); // KLLTuple Tradicional con Espacio Maximo dado para abarcar un numElementsParam determinado
         KLLTuple(uint64_t numElementsParam, double epsilon, double cParam, int minKp); // KLLTuple Tradicional que determina espacio a ocupar según epsilon entregado
+        
+        KLLTuple(vector<int64_t> sizeOfCompactors, int H_ppParam); // KLLTuple Tradicional pero que se le indica el tamaño de los compactores y H_PP
+
         KLLTuple(uint64_t minKP); // MRL
         KLLTuple(uint64_t espacioMaximo, uint64_t numElementsParam); // MRL con Espacio Maximo dado para abarcar un numElementsParam determinado
         KLLTuple(double epsilonParam, uint64_t numElementsParam); // MRL que determina espacio a ocupar según epsilon entregado
@@ -63,6 +66,7 @@ class KLLTuple{
         uint32_t getFirstLevelK();
         vector<double> getMRLParameters();
         vector<double> getKLLParameters();
+        vector<double> getAllParameters();
         pair<uint64_t,uint64_t> getNumElementsSeen(); 
         pair<pair<int64_t,int64_t>, pair<int64_t,int64_t>> getMinMaxElement();
         pair<unsigned long, pair<int64_t,int64_t>> getCurrentSample();
