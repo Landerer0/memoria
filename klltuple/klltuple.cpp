@@ -1501,12 +1501,19 @@ vector<pair<int64_t,int64_t>> KLLTuple::getTopFlows(vector<pair<int64_t,int64_t>
     vector<pair<int64_t,int64_t>> flows;
     vector<pair<int64_t,int64_t>> heap = getSortHeap();
     
+// Calculo de los flujos más relevantes e insercion en heapFlows
+    // double factorReduccion = 5;
+    // heapFlows.push_back(heap.at(0));
+    // for(int i=0;i<heap.size()-1;i++){
+    //     cout << "comp: " << heap.at(i).first/factorReduccion <<"|" << heap.at(i+1).first << endl;
+    //     if(heap.at(i).first/factorReduccion<=heap.at(i+1).first) heapFlows.push_back(heap.at(i+1));
+    // }
+
     // Calculo de los flujos más relevantes e insercion en heapFlows
-    double factorReduccion = 5;
+    double factorReduccion = 0;
     heapFlows.push_back(heap.at(0));
     for(int i=0;i<heap.size()-1;i++){
-        cout << "comp: " << heap.at(i).first/factorReduccion <<"|" << heap.at(i+1).first << endl;
-        if(heap.at(i).first/factorReduccion<=heap.at(i+1).first) heapFlows.push_back(heap.at(i+1));
+        if(heap.at(i).first*factorReduccion<=heap.at(i+1).first) heapFlows.push_back(heap.at(i+1));
     }
 
     // obtener los pares(payload, flujo) que pertenecen al 95%percentil de payloads en kll
