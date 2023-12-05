@@ -46,8 +46,8 @@ void almacenarDatos(string nombreBinario, vector<pair<int64_t,int64_t>> estimaci
     // se define ubicacion resultante de los archivos generados por las pruebas
     std::string nombreCarpeta = "estimacionFrecuencias/";
 
-    string archivoGuardado = nombreCarpeta+"Espacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
-    string archivoGuardadoParametros = nombreCarpeta+"parametrosEspacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
+    string archivoGuardado = nombreCarpeta+"H_pp"+to_string(kll.getH_pp())+"Espacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
+    string archivoGuardadoParametros = nombreCarpeta+"H_pp"+to_string(kll.getH_pp())+"parametrosEspacio"+to_string(kll.sizeInBytes())+nombreBinario+".txt";
     // Nombre del archivo de salida
     // Abrir el archivo en modo de escritura y almacenar los resultados en distintos archivos
     std::ofstream outfileParametros(archivoGuardado);
@@ -142,8 +142,8 @@ int main(int argc, char*argv[]){
     int H_pp1 = 2;
     vector<int64_t> sizekll1 = {100, 100, 100};
     vector<int64_t> sizekll2 = {500, 500, 500};
-    klls.push_back(KLLTuple(sizekll1,H_pp1+2));
-    klls.push_back(KLLTuple(sizekll2,H_pp1+2));
+    klls.push_back(KLLTuple(sizekll1,H_pp1));
+    klls.push_back(KLLTuple(sizekll2,H_pp1));
     
     // INGRESO DATOS KLLS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     //! CAMBIAR "archivoLecturaKLL" dependiendo de si se trabaja con datos reales o generados
